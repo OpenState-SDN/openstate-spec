@@ -1,0 +1,145 @@
+%!TEX TS-program = pdflatex
+
+\documentclass[a4paper,12pt,oneside]{book}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{fancyhdr} 
+\usepackage[footnotesize,hang,bf]{caption} %img caption
+\usepackage{tabularx}
+\usepackage{setspace}
+\usepackage{framed}
+\usepackage{fancyvrb}
+\usepackage{subfigure}
+\usepackage{xcolor}
+\usepackage{color}
+\usepackage{lscape}
+\usepackage{pdfpages}
+\usepackage{acronym}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{amssymb}
+
+%must be last package
+
+\usepackage{hyperref}
+
+%subitem
+\newcommand{\revcomment}[1]{\textcolor{red}{ \bf [ #1 ]}}
+
+%font per il linguaggio bash
+\lstdefinestyle{BashInputStyle}{
+  language=bash,
+  basicstyle=\small\sffamily\scriptsize,
+  frame=tb,
+  columns=fullflexible,
+  backgroundcolor=\color{yellow!20},
+  linewidth=0.95\linewidth,
+  xleftmargin=0.05\linewidth,
+  breaklines=true
+}
+
+\lstdefinestyle{customc}{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=L,
+  xleftmargin=\parindent,
+  language=C,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{blue},
+  stringstyle=\color{orange},
+}
+
+
+%Page layout
+\topmargin 0cm 
+\headsep 1cm 
+\headheight 0.6cm
+\textwidth 14.6cm
+\textheight 21.8cm
+\evensidemargin 1cm 
+\oddsidemargin 1cm      
+
+\fancyhead[L]{\chaptername \thechapter}
+\fancyhead[LO]{\thesection} \fancyhead[RO]{\sectionmark}
+\lhead{\slshape Ch. \thechapter}
+
+
+% Configurazioni varie
+
+
+% crea una nuova lunghezza e gli assegna un valore
+\newlength{\defbaselineskip}
+\setlength{\defbaselineskip}{\baselineskip}
+
+% comando per settare  la variabile \baselineskip come multiplo di \defbaselineskip
+\newcommand{\setlinespacing}[1]%
+           {\setlength{\baselineskip}{#1 \defbaselineskip}}
+
+% permette l'inserimento "rapido" del virgolettato (ad es. per citazioni)
+\newcommand{\fastquote}[1]{``#1''}
+
+% definizione dello stile delle didascalie delle immagini
+\renewcommand{\captionfont}{%
+	\normalfont \sffamily \slshape \footnotesize%
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                         Inizio Documento                          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\hypersetup{pdfinfo={
+	Title={Software-Defined Networking Applications Based on OpenState},
+	Author={Luca Pollini,Davide Sanvito}
+}}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+\begin{document}
+
+%\include{front}
+%\clearpage
+%\newpage
+
+
+% Settaggio interlinea
+\setlinespacing{1.5}
+
+
+% Inizio Numerazione Romana
+\pagenumbering{Roman}
+
+% Indice
+\tableofcontents
+\newpage
+\clearpage
+
+% Impostazioni della pagina
+\pagestyle{fancy} 
+\headsep=40pt 
+\lhead{} 
+\rhead{\slshape \leftmark} 
+\cfoot{\thepage}
+
+
+% Inizio Numerazione Araba
+\pagenumbering{arabic}
+
+% Vari Capitoli
+% \include{introduction} %
+\include{openstate}
+\include{configuration}
+\include{flow_states}
+\include{global_states}
+
+% Fine del documento
+
+\end{document}
+
