@@ -68,7 +68,7 @@ As defined in OpenFlow, actions are usually executed at the end of the pipeline.
 \item Set-state action can be called only on stateful stage. This check is performed at action execution time (maybe the flow-mod message with a set-state action is received by the switch before configuring a stage as stateful. The important thing is that the stage is stateful at action execution time).
 \comment{Luca, Davide}{Should we inform the controller about this error?}
 
-\item Set-state action must be performed onto a stage with \texttt{stage\_id} less or equal than the number of pipeline’s tables. This check is performed at msg unpack time (the number of table is fixed, so installing a flow with a wrong action does not make sense). \todo{Luca, Davide}{}
+\item Set-state action must be performed onto a stage with \texttt{stage\_id} less or equal than the number of pipeline’s tables. This check is performed at msg unpack time (the number of table is fixed, so installing a flow with a wrong action does not make sense).
 \end{itemize}
 
 \subsection{Priority}
@@ -251,7 +251,6 @@ The state value is not taken in consideration because the state table simply use
 
 \item Lookup-scope and update-scope should provide same length keys. This check should be performed by the switch when a set-extractor message is received: if we have already set the other extractor, the new extractor must have the same length. The check is performed at msg execution time.
 \comment{Luca, Davide}{Should we inform the controller about this error?}
-\todo{Luca, Davide}
 
 \item Set-flow-state/Delete-flow-state commands must be executed onto a stage with stage\_id less or equal than the number of pipeline’s tables, otherwise the switch returns an error (OFPET\_BAD\_REQUEST, OFPBRC\_BAD\_TABLE\_ID). This check is performed at msg unpack time (since the number of table is fixed).
 
