@@ -1,12 +1,22 @@
-\chapter{Protocol}
-\label{chap:configuration}
+%!TEX root=main.tex
 
-\section{Openstate Capability}
+\chapter{Protocol}
+\label{chap:protocol}
+
+\section{Capability}
 \label{sec:capability}
 A new OFPC\_OPENSTATE capability has been introduced.
 The basic flow table data structure has been extended with a support data structure implementing the state table (a hash map indexed by the flow key), the lookup and update key extractor (two ordered lists of flow match TLV field indexes) and the global states.
 By retrieving all the capabilities from the switch, the controller is able to properly configure the switch. If a switch is OpenState aware, OFPC\_OPENSTATE capability is defined enabling the controller to configure the statefulness of each stage by sending table feature message [\ref{sec:table_conf}].
 
-\section{Stateful Stage Configuration}
+\section{Stage Configuration}
 \label{sec:table_conf}
 If OFPTC\_TABLE\_STATEFUL flag is set, right after the packet headers are parsed, the flow state is retrieved and written in the state field, otherwise the packet directly jumps to the flow table. 
+
+\section{State Modification Messages}
+
+\section{State Modification Messages}
+
+\section{Set-state Action}
+
+\section{State Match Field}
