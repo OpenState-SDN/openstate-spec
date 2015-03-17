@@ -57,6 +57,7 @@ OFP_ASSERT(sizeof(struct ofp_action_set_state) == 16);
 \end{verbatim}
 
 \comment{Carmelo}{I think we should rename stage\_id into table\_id for consistency with the OpenFlow specification}
+\comment{Luca, Davide}{\textbf{To Carmelo:} Since a stateful stage comprises a state table and and a flow table, we used stage\_id because we are not referring to the single flow table (table\_id) but we are referring to the entire stateful stage. }
 
 \subsection{Atomicity}
 As defined in OpenFlow, actions are usually executed at the end of the pipeline. The same applies for the \textbf{set-state} action, thus making the stateful steps ``lookup/update'' not atomic by default. Not enforcing atomicity can bring to consistency issues when more than one packet are processed by the pipeline at the same time. The only way to guarantees state consistency between packets is to call the \textbf{set-state} action from the \textbf{apply-action} instruction (instead of the \textbf{write-actions} instruction) in order to be sure to update the value contained in the state table when exiting a specific stage of the pipeline.
@@ -67,7 +68,7 @@ As defined in OpenFlow, actions are usually executed at the end of the pipeline.
 \item Set-state action can be called only on stateful stage. This check is performed at action execution time (maybe the flow-mod message with a set-state action is received by the switch before configuring a stage as stateful. The important thing is that the stage is stateful at action execution time).
 \comment{Luca, Davide}{Should we inform the controller about this error?}
 
-\item Set-state action must be performed onto a stage with \texttt{stage\_id} less or equal than the number of pipeline’s tables. This check is performed at msg unpack time (the number of table is fixed, so installing a flow with a wrong action does not make sense). \comment{Luca, Davide}{TODO}
+\item Set-state action must be performed onto a stage with \texttt{stage\_id} less or equal than the number of pipeline’s tables. This check is performed at msg unpack time (the number of table is fixed, so installing a flow with a wrong action does not make sense). \todo{Luca, Davide}{}
 \end{itemize}
 
 \subsection{Priority}
@@ -82,7 +83,7 @@ The new \texttt{OFPAT\_SET\_STATE} action has to be executed with an higher prio
 The \texttt{OXM\_OF\_STATE} field is the field used in the flow table to match on the state value defined in the virtual packet header field returned by a state table in a stateful stage. It is a 32 bit field.
 
 \comment{Luca, Davide}{Does OXM\_OF\_STATE need to have a mask?}
-\comment{Carmelo}{I think yes, the state field should be maskable. An example use case could be matching on the second half of a MPLS label describing the ingress/egress switch. In the same way I propose to introduce the possibility to mask the state value in the set-state action.}
+\comment{Carmelo}{\textbf{To Luca, Davide:} I think yes, the state field should be maskable. An example use case could be matching on the second half of a MPLS label describing the ingress/egress switch. In the same way I propose to introduce the possibility to mask the state value in the set-state action.}
 
 \begin{verbatim}
 /* Flow state field definition (oxm-match.h) */
@@ -129,7 +130,17 @@ struct ofp_state_mod {
     uint8_t  command;
     uint8_t  payload[];
 };
+\end{verbatim}
 
+\comment{Luca, Davide}{
+From OpenFlow spec:
+\textit{The cookie field is an opaque data value chosen by the controller. This value appears in flow removed
+messages and flow statistics, and can also be used to filter flow statistics, flow modification and flow deletion. It is not used by the packet processing pipeline. When a flow entry is inserted in a table through an OFPFC\_ADD message, its cookie field is set to the provided value. When a flow entry is modified (OFPFC\_MODIFY or OFPFC\_MODIFY\_STRICT messages), its cookie field is unchanged.}
+
+Why has it been included in the ofp\_state\_mod message?
+}
+
+\begin{verbatim}
 struct ofp_state_entry {
     uint32_t key_len;
     uint32_t state;
@@ -152,7 +163,7 @@ enum ofp_state_mod_command {
 
 \comment{Carmelo}{enum values are not defined for ofp\_state\_mod\_command}
 
-\comment{Luca, Davide}{An enumerator with no = defines its value by adding 1 to the value of the previous enumeration constant }
+\comment{Luca, Davide}{\textbf{To Carmelo:} An enumerator with no = defines its value by adding 1 to the value of the previous enumeration constant }
 
 \comment{Luca, Davide}{who decides OFPSC\_MAX\_FIELD\_COUNT and OFPSC\_MAX\_KEY\_LEN? Should they be configurable?}
 
@@ -231,14 +242,17 @@ The state value is not taken in consideration because the state table simply use
 \begin{itemize}
 \item In Set-lookup-extractor/Set-update-extractor commands \texttt{field\_count} must be consistent with the number of fields provided in \texttt{fields[]}, otherwise an error (\texttt{OFPET\_BAD\_ACTION}, \texttt{OFPBAC\_BAD\_LEN}) is returned at message unpack time
 \comment{Carmelo}{Are both \texttt{OFPET\_BAD\_ACTION} and \texttt{OFPBAC\_BAD\_LEN} returned?}
-\comment{Luca, Davide}{An error message has a type (\texttt{OFPET\_BAD\_ACTION}) and a code (\texttt{OFPBAC\_BAD\_LEN}): }
+\comment{Luca, Davide}{\textbf{To Carmelo:} An error message has a type (\texttt{OFPET\_BAD\_ACTION}) and a code (\texttt{OFPBAC\_BAD\_LEN}): }
 
 \item In Set-flow-state/Delete-flow-state commands \texttt{key\_count} must be consistent with the number of keys provided in \texttt{key[]}, otherwise an error (\texttt{OFPET\_BAD\_ACTION}, \texttt{OFPBAC\_BAD\_LEN}) is returned at msg unpack time. 
 
-\item In Set-flow-state/Delete-flow-state commands \texttt{key\_count} must be consistent with the number of fields of the update-scope (defined before with a OFPSC\_SET\_U\_EXTRACTOR)
+\item In Set-flow-state/Delete-flow-state commands \texttt{key\_count} must be consistent with the number of fields of the update-scope (defined before with a OFPSC\_SET\_U\_EXTRACTOR). This check is performed at msg execution time
+\comment{Luca, Davide}{Should we inform the controller about this error?}
 
-\item Lookup-scope and update-scope should provide same length keys. This check should be performed by the switch when a set-extractor message is received. Check if we have already set the other extractor with the same length. The check is performed at message unpack time or at message execution time. \todo{Luca, Davide}
+\item Lookup-scope and update-scope should provide same length keys. This check should be performed by the switch when a set-extractor message is received: if we have already set the other extractor, the new extractor must have the same length. The check is performed at msg execution time.
+\comment{Luca, Davide}{Should we inform the controller about this error?}
+\todo{Luca, Davide}
 
-\item Set-flow-state/Delete-flow-state commands must be executed onto a stage with stage\_id less or equal than the number of pipeline’s tables, otherwise the switch returns an error (OFPET\_BAD\_REQUEST, OFPBRC\_BAD\_TABLE\_ID). This check is performed at msg unpack time (the number of table is fixed).
+\item Set-flow-state/Delete-flow-state commands must be executed onto a stage with stage\_id less or equal than the number of pipeline’s tables, otherwise the switch returns an error (OFPET\_BAD\_REQUEST, OFPBRC\_BAD\_TABLE\_ID). This check is performed at msg unpack time (since the number of table is fixed).
 
 \end{itemize}
