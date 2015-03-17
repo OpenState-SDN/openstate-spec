@@ -42,13 +42,13 @@ If the header fields specified by the lookup-scope are not found (e.g. extractin
 
 The \texttt{OFPAT\_SET\_STATE} action allows to set flow-states in a particulare stage of the pipeline.
 
-The structre of the \texttt{OFPAT\_SET\_STATE} is defined in the following:
+The structure of the \texttt{OFPAT\_SET\_STATE} is defined in the following:
 
 \begin{verbatim}
 /* Action structure for OFPAT_SET_STATE. */
 struct ofp_action_set_state {
     uint16_t type;     /* OFPAT_SET_STATE */
-    uint16_t len;      /* Length is 8. */
+    uint16_t len;      /* Length is 16. */
     uint32_t state;    /* State value. */
     uint8_t stage_id;  /* Stage ID (same as flow table ID) of the state table */
     uint8_t pad[7];    /* Align to 64-bits. */
@@ -63,9 +63,12 @@ As defined in OpenFlow, actions are usually executed at the end of the pipeline.
 
 \subsection{Checks and Errors}
 
-Set-state action can be called only on stateful stage. This check is performed at action execution time (maybe the flow-mod message with a set-state action is received by the switch before configuring a stage as stateful. The important thing is that the stage is stateful at action execution time). Should we inform the controller about this error?
+\begin{itemize}
+\item Set-state action can be called only on stateful stage. This check is performed at action execution time (maybe the flow-mod message with a set-state action is received by the switch before configuring a stage as stateful. The important thing is that the stage is stateful at action execution time).
+\comment{Luca, Davide}{Should we inform the controller about this error?}
 
-Set-state action must be performed onto a stage with \texttt{stage\_id} less or equal than the number of pipeline’s tables. This check is performed at msg unpack time (the number of table is fixed, so installing a flow with a wrong action does not make sense). \comment{Luca, Davide}{TODO}
+\item Set-state action must be performed onto a stage with \texttt{stage\_id} less or equal than the number of pipeline’s tables. This check is performed at msg unpack time (the number of table is fixed, so installing a flow with a wrong action does not make sense). \comment{Luca, Davide}{TODO}
+\end{itemize}
 
 \subsection{Priority}
 
@@ -149,6 +152,8 @@ enum ofp_state_mod_command {
 
 \comment{Carmelo}{enum values are not defined for ofp\_state\_mod\_command}
 
+\comment{Luca, Davide}{An enumerator with no = defines its value by adding 1 to the value of the previous enumeration constant }
+
 \comment{Luca, Davide}{who decides OFPSC\_MAX\_FIELD\_COUNT and OFPSC\_MAX\_KEY\_LEN? Should they be configurable?}
 
 \subsubsection{Set-lookup-extractor command}
@@ -158,13 +163,14 @@ The \texttt{OFPSC\_SET\_L\_EXTRACTOR} command gives the opportunity to set the l
 The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following parameters:
 
 \begin{itemize}
+\item table\_id = ID of the stage to be setup
 \item command = 0 (\texttt{OFPSC\_SET\_L\_EXTRACTOR})
 \item field\_count = number of specified field 
 \item fields = key’s fields
-\item table\_id = ID of the stage to be setup
 \end{itemize}
 
 \todo{Luca, Davide}{Include C struct of OFPSC\_SET\_L\_EXTRACTOR}
+\comment{Luca, Davide}{A Set-lookup-extractor command is a ofp_state_mod message with command = 0 and struct ofp_extraction as ofp_state_mod's payload}
 
 \subsubsection{Set-update-extractor command}
 \label{subsec:set_u_extr}
@@ -173,14 +179,14 @@ The OFPSC\_SET\_U\_EXTRACTOR command gives the opportunity to set the update sco
 The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following parameters:
 
 \begin{itemize}
+\item table\_id = ID of the stage to be setup
 \item command = 1 (OFPSC\_SET\_U\_EXTRACTOR)
 \item field\_count = number of specified field 
 \item fields = key’s fields
-\item table\_id = ID of the stage to be setup
 \end{itemize}
 
 \todo{Luca, Davide}{Include C struct of OFPSC\_SET\_U\_EXTRACTOR}
-
+\comment{Luca, Davide}{A Set-update-extractor command is a ofp_state_mod message with command = 1 and struct ofp_extraction as ofp_state_mod's payload}
 
 \subsection{Set-flow-state command}
 \label{subsec:add_flow}
@@ -189,14 +195,15 @@ The OFPSC\_ADD\_FLOW\_STATE command gives the opportunity to insert (or to overw
 The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following parameters:
 
 \begin{itemize}
+\item table\_id = ID of the stage to be modified
 \item command = 2 (OFPSC\_ADD\_FLOW\_STATE)
 \item key\_count = it is the key size in byte
 \item state = it is the state to insert in the state table
 \item keys = key splitted in bytes (e.g: ip 10.0.0.1 is stored as [10,0,0,1])
-\item table\_id = ID of the stage to be modified
 \end{itemize}
 
 \todo{Luca, Davide}{Include C struct of OFPSC\_ADD\_FLOW\_STATE}
+\comment{Luca, Davide}{A Set-flow-state command is an ofp_state_mod message with command = 2 and struct ofp_state_entry as ofp_state_mod's payload}
 
 \comment{Carmelo}{OFPSC\_ADD\_FLOW\_STATE should be renamed in OFPSC\_SET\_FLOW\_STATE}
 
@@ -207,29 +214,31 @@ With the OFPSC\_DEL\_FLOW\_STATE command is possible to delete a state table's e
 The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following parameters:
 
 \begin{itemize}
+\item table\_id = ID of the stage to be modified
 \item command = 3 (OFPSC\_DEL\_FLOW\_STATE)
 \item key\_count = it is the key size in byte
 \item state = ANY
 \item keys = key splitted in bytes (e.g: ip 10.0.0.1 is stored as [10,0,0,1])
-\item table\_id = ID of the stage to be modified
 \end{itemize}
 
 \todo{Luca, Davide}{Include C struct of OFPSC\_DEL\_FLOW\_STATE}
+\comment{Luca, Davide}{A Delete-flow-state command is an ofp_state_mod message with command = 3 and struct ofp_state_entry as ofp_state_mod's payload}
 
 The state value is not taken in consideration because the state table simply uses as key the lookup-scope's fields to delete the entry with key keys.
 
 \paragraph{Checks and Errors}
 
 \begin{itemize}
-\item \texttt{field\_count} must be consistent with the number of fields provided in fields, otherwise an error (\texttt{OFPET\_BAD\_ACTION}, \texttt{OFPBAC\_BAD\_LEN}) is returned at message unpack time)
+\item In Set-lookup-extractor/Set-update-extractor commands \texttt{field\_count} must be consistent with the number of fields provided in \texttt{fields[]}, otherwise an error (\texttt{OFPET\_BAD\_ACTION}, \texttt{OFPBAC\_BAD\_LEN}) is returned at message unpack time
 \comment{Carmelo}{Are both \texttt{OFPET\_BAD\_ACTION} and \texttt{OFPBAC\_BAD\_LEN} returned?}
+\comment{Luca, Davide}{An error message has a type (\texttt{OFPET\_BAD\_ACTION}) and a code (\texttt{OFPBAC\_BAD\_LEN}): }
+
+\item In Set-flow-state/Delete-flow-state commands \texttt{key\_count} must be consistent with the number of keys provided in \texttt{key[]}, otherwise an error (\texttt{OFPET\_BAD\_ACTION}, \texttt{OFPBAC\_BAD\_LEN}) is returned at msg unpack time. 
+
+\item In Set-flow-state/Delete-flow-state commands \texttt{key\_count} must be consistent with the number of fields of the update-scope (defined before with a OFPSC\_SET\_U\_EXTRACTOR)
 
 \item Lookup-scope and update-scope should provide same length keys. This check should be performed by the switch when a set-extractor message is received. Check if we have already set the other extractor with the same length. The check is performed at message unpack time or at message execution time. \todo{Luca, Davide}
 
-\item \texttt{key\_count} must be consistent with the number of fields provided in key, otherwise the error (\texttt{OFPET\_BAD\_ACTION}, \texttt{OFPBAC\_BAD\_LEN}) is returned at msg unpack time. 
-
-\item Set state message must be executed onto a stage with stage\_id less or equal than the number of pipeline’s tables, otherwise the switch returns an error (OFPET\_BAD\_REQUEST, OFPBRC\_BAD\_TABLE\_ID). This check is performed at msg unpack time (the number of table is fixed).
-
-\item key\_count must be consistent with the number of fields of the update-scope (defined before with a OFPSC\_SET\_U\_EXTRACTOR)
+\item Set-flow-state/Delete-flow-state commands must be executed onto a stage with stage\_id less or equal than the number of pipeline’s tables, otherwise the switch returns an error (OFPET\_BAD\_REQUEST, OFPBRC\_BAD\_TABLE\_ID). This check is performed at msg unpack time (the number of table is fixed).
 
 \end{itemize}
