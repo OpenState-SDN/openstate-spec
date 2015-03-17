@@ -1,6 +1,6 @@
 %!TEX TS-program = pdflatex
 
-\documentclass[a4paper,11pt,oneside]{scrreprt}
+\documentclass[a4paper,11pt,twoside=semi]{scrreprt}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage[pdftex]{graphicx}
@@ -8,9 +8,14 @@
 \DeclareGraphicsExtensions{.pdf,.jpeg,.png}
 \usepackage{hyperref}
 \usepackage{mdframed}
-\definecolor{shadecolor}{rgb}{1,0.8,0.3}
 \usepackage[margin=3cm]{geometry}
+\usepackage[automark,headsepline]{scrlayer-scrpage}
 
+\clearpairofpagestyles
+\cfoot[\pagemark]{\pagemark}
+\lehead{\headmark}
+\rohead{\headmark}
+\pagestyle{scrheadings}
 
 % permette l'inserimento "rapido" del virgolettato (ad es. per citazioni)
 \newcommand{\fastquote}[1]{``#1''}
