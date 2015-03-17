@@ -1,4 +1,6 @@
-\chapter{Global states}
+%!TEX root=000-main.tex
+
+\chapter{Global States}
 \label{chap:global_states}
 Global states (or flags) are defined at datapath level and are not related to a single flow of a particular stage.
 Flags are 32 boolean registers and are grouped in an uint32\_t variable global\_states in the datapath struct.
@@ -9,20 +11,20 @@ Flags are 32 boolean registers and are grouped in an uint32\_t variable global\_
 If a switch supports OpenState (flag OFPTC\_TABLE\_STATEFUL set), right after the packet headers are parsed, the global states are retrieved and written in the flags field. OXM\_OF\_FLAGS is a field with mask, so it is possible to match it either exactly or with wildcards. A 0 bit in the mask means i-th flags value is ``do not care'', while a 1 bit value means ``exact match''.
 
 Definition in ofsoftswitch13 (oxm-match.h file)
-\begin{lstlisting}[style=customc]
+\begin{verbatim}
 /* Global States */
 #define OXM_OF_FLAGS OXM_HEADER     (0x8000, 40, 4)
 #define OXM_OF_FLAGS_W OXM_HEADER_W (0x8000, 40, 4)
-\end{lstlisting}
+\end{verbatim}
 Example match:
-\begin{lstlisting}[style=customc]
+\begin{verbatim}
 flags=(4,5)
-\end{lstlisting}
+\end{verbatim}
 This command allows to match over *****************************1*0 flags configuration (4 in binary is 100 and the mask 5 is 101 that is exact match on LSB 1 (0 value) and LSB 3 (1 value) and ``don’t care'' over all the other flags. In order to perform an exact match on flags value no mask is required.
 \\Example match:
-\begin{lstlisting}[style=customc]
+\begin{verbatim}
 flags=4
-\end{lstlisting}
+\end{verbatim}
 NB: this match is very differend from the previous one. With this command we are matching over 00000000000000000000000000000100 flags configuration, so it is an exact match.
 
 \section{Set flag action}
@@ -36,7 +38,7 @@ In the flow modification message, the controller defines the action with the fol
 \end{itemize}
 
 \paragraph{Structures in ofsoftswitch13:}\mbox{}\\
-\begin{lstlisting}[style=customc]
+\begin{verbatim}
 OFPAT_SET_FLAG = 29,   /* Set a single flag value of the global state */
 
 /* Action structure for OFPAT_SET_FLAG */
@@ -48,13 +50,13 @@ struct ofp_action_set_flag {
     uint8_t pad[4];   /* Align to 64-bits. */
 };
 OFP_ASSERT(sizeof(struct ofp_action_set_flag) == 16);
-\end{lstlisting}
+\end{verbatim}
 
 \section{Flag modification messages}
 \label{section:flag_mod_msg}
 The OFPT\_FLAG\_MOD message allow the controller to modify global states value.
 \paragraph{Structures in ofsoftswitch13:}\mbox{}\\
-\begin{lstlisting}[style=customc]
+\begin{verbatim}
 OFPT_FLAG_MOD = 31,  /* Controller/switch message */
 
 struct ofp_flag_mod {
@@ -70,7 +72,7 @@ enum ofp_flag_mod_command {
     OFPSC_RESET_FLAGS
 };
 
-\end{lstlisting}
+\end{verbatim}
 
 There are two message types.
 \subsection{Modify flags command}
