@@ -170,7 +170,7 @@ The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following para
 \end{itemize}
 
 \todo{Luca, Davide}{Include C struct of OFPSC\_SET\_L\_EXTRACTOR}
-\comment{Luca, Davide}{A Set-lookup-extractor command is a ofp_state_mod message with command = 0 and struct ofp_extraction as ofp_state_mod's payload}
+\comment{Luca, Davide}{A Set-lookup-extractor command is a ofp\_state\_mod message with command = 0 and struct ofp\_extraction as ofp\_state\_mod's payload}
 
 \subsubsection{Set-update-extractor command}
 \label{subsec:set_u_extr}
@@ -186,7 +186,7 @@ The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following para
 \end{itemize}
 
 \todo{Luca, Davide}{Include C struct of OFPSC\_SET\_U\_EXTRACTOR}
-\comment{Luca, Davide}{A Set-update-extractor command is a ofp_state_mod message with command = 1 and struct ofp_extraction as ofp_state_mod's payload}
+\comment{Luca, Davide}{A Set-update-extractor command is a ofp\_state\_mod message with command = 1 and struct ofp\_extraction as ofp\_state\_mod's payload}
 
 \subsection{Set-flow-state command}
 \label{subsec:add_flow}
@@ -203,7 +203,7 @@ The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following para
 \end{itemize}
 
 \todo{Luca, Davide}{Include C struct of OFPSC\_ADD\_FLOW\_STATE}
-\comment{Luca, Davide}{A Set-flow-state command is an ofp_state_mod message with command = 2 and struct ofp_state_entry as ofp_state_mod's payload}
+\comment{Luca, Davide}{A Set-flow-state command is an ofp\_state\_mod message with command = 2 and struct ofp\_state\_entry as ofp\_state\_mod's payload}
 
 \comment{Carmelo}{OFPSC\_ADD\_FLOW\_STATE should be renamed in OFPSC\_SET\_FLOW\_STATE}
 
@@ -222,7 +222,7 @@ The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following para
 \end{itemize}
 
 \todo{Luca, Davide}{Include C struct of OFPSC\_DEL\_FLOW\_STATE}
-\comment{Luca, Davide}{A Delete-flow-state command is an ofp_state_mod message with command = 3 and struct ofp_state_entry as ofp_state_mod's payload}
+\comment{Luca, Davide}{A Delete-flow-state command is an ofp\_state\_mod message with command = 3 and struct ofp\_state\_entry as ofp\_state\_mod's payload}
 
 The state value is not taken in consideration because the state table simply uses as key the lookup-scope's fields to delete the entry with key keys.
 
