@@ -18,6 +18,8 @@ The flow table is extended by adding support to a new ``state'' virtual header f
 
 \comment{Carmelo}{Is it correct to say that state labels are valid only inside the stateful stage that produced them? In other words, can I match on multiple state labels provided by different stateful stages?}
 
+\comment{Luca e Davide}{@Carmelo: It is correct! A state label can be matched only inside the stage that produced it. In a flow entry is not possible to match over multiple state fields, but it is possible to think a distributed match over multiple stages. For example, it is possible to match over a state defined in stage 1 and then, by using the metadata field to take into account the precedent match, you can process the packet in the stage 2 to match over another state. In this way you have matched over states defined in stage 1 and stage 2}
+
 By default all the flow tables in the switch are intended as stateless stages, the controller can then enable stateful processing for one or more stages by sending a special control message to the switch and by configuring the key extractors (lookup-scope and update-scope) associated with the state table. Similarly to flow tables, new modification message called \emph{state-mod} has been defined to allow the controller to configure the state entries and key extractors.
 
 
