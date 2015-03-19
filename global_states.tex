@@ -3,5 +3,22 @@
 \chapter{Global States}
 \label{chap:global_states}
 Global states (or flags) are defined at datapath level and are not related to a single flow of a particular stage.
-Flags are 32 boolean registers and are grouped in an uint32\_t variable global\_states in the datapath struct.
 
+\section{Flag modification messages}
+\label{sec:flag_mod_msg}
+
+Flag modification messages can have the following types:
+\scriptsize\begin{verbatim}
+enum ofp_flag_mod_command { 
+    OFPSC_MODIFY_FLAGS = 0,
+    OFPSC_RESET_FLAGS
+};
+\end{verbatim}\normalsize
+\noindent
+To \textbf{modify} global states values the controller sends a flag modification message with the \texttt{OFPSC\_MODIFY\_FLAGS} command set. Global state values can be totally overwritten or, by using a mask, selectively modified.
+\\\\It is possible to \textbf{reset} the global states to the default value by sending a flag modification message with the \texttt{OFPSC\_RESET\_FLAGS} command set from the controller.
+
+\section{Set-flag Action}
+\label{sec:act_set_flag}
+In addition to flag modification messages \ref{sec:flag_mod_msg}, the global states can be modified as a consequence of packet matching in a flow entry. By adding a set-flag action to the action set, it is possible to modify the global state values in any stage of the pipeline.
+OpenFlow allows to execute actions in the group table, so it is possible to update global state values from the group table by inserting a set-flag action in the action bucket.

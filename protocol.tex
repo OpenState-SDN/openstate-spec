@@ -193,10 +193,10 @@ The \texttt{OXM\_OF\_STATE} field is the field used in the flow table to match o
 \normalsize
 
 \section{Flag modification messages}
-\label{section:flag_mod_msg}
-The OFPT\_FLAG\_MOD message allow the controller to modify global states value.
-\paragraph{Structures in ofsoftswitch13:}\mbox{}\\
-\begin{verbatim}
+\label{sec:flag_mod_msg_proto}
+Modifications to the global states from the controller are done with the \texttt{OFPT\_FLAG\_MOD} message.
+
+\scriptsize\begin{verbatim}
 OFPT_FLAG_MOD = 31,  /* Controller/switch message */
 
 struct ofp_flag_mod {
@@ -206,78 +206,80 @@ struct ofp_flag_mod {
     uint8_t command;
     uint8_t pad[7];                  /* Pad to 64 bits. */
 };
+\end{verbatim}\normalsize
 
+\noindent
+The \texttt{flag} field specifies the new value of global states.
+\\\\The \texttt{flag\_mask} field specifies which bits of the global state should be modified. A \texttt{flag\_mask} with value \texttt{0xFFFFFFFFFFFFFFFF} indicates that the global state field should be entirely overwritten.
+The \texttt{command} field must be one of the following:
+
+\scriptsize\begin{verbatim}
 enum ofp_flag_mod_command { 
     OFPSC_MODIFY_FLAGS = 0,
     OFPSC_RESET_FLAGS
 };
+\end{verbatim}\normalsize
+\noindent
+The differences between the two commands are explained in section \ref{sec:flag_mod_msg}.
 
-\end{verbatim}
+\scriptsize\begin{verbatim}
+#define OFP_GLOBAL_STATES_DEFAULT 0
+\end{verbatim}\normalsize
+\noindent
+In case command field is set to \texttt{OFPSC\_RESET\_FLAGS}, both the \texttt{flag} field and the \texttt{flag\_mask} can take any value and global states are reset to the default value defined in \texttt{OFP\_GLOBAL\_STATES\_DEFAULT}.
 
-There are two message types.
-\subsection{Modify flags command}
-The OFPSC\_MODIFY\_FLAGS allows to modify global states values. The controller sends a OFPSC\_MODIFY\_FLAGS message with the following parameters:
-\begin{itemize}
-\setlength\itemsep{0em}
-\item flag = flags value
-\item flag\_mask = mask value
-\item command = 0 (OFPSC\_MODIFY\_FLAGS)
-\end{itemize}
+\comment{Luca e Davide}{Does the OFP\_GLOBAL\_STATES\_DEFAULT be configurable?}
 
-\subsection{Reset flags command}
-The OFPSC\_MODIFY\_FLAGS allows to reset global states to the default value (OFP\_GLOBAL\_STATES\_DEFAULT in openflow.h)
-The controller sends a OFPSC\_MODIFY\_FLAGS message with the following parameters:
-\begin{itemize}
-\setlength\itemsep{0em}
-\item flag = ANY
-\item flag\_mask = ANY
-\item command = 1 (OFPSC\_RESET\_FLAGS)
-\end{itemize}
 
-\section{Set flag action}
-\label{section:set_flag_action}
-The OFPAT\_SET\_FLAG action is used to set flags' value.
-In the flow modification message, the controller defines the action with the following parameters:
-\begin{itemize}
-\setlength\itemsep{0em}
-\item flag = flags value
-\item mask = flags mask
-\end{itemize}
 
-\paragraph{Structures in ofsoftswitch13:}\mbox{}\\
-\begin{verbatim}
+\section{Set-flag action}
+\label{sec:set_flag_action_proto}
+The \texttt{OFPAT\_SET\_FLAG} action is used to set flags' value.
+The following structure describes the body of set-flag action:
+
+\scriptsize\begin{verbatim}
 OFPAT_SET_FLAG = 29,   /* Set a single flag value of the global state */
 
 /* Action structure for OFPAT_SET_FLAG */
 struct ofp_action_set_flag {
-    uint16_t type; /* OFPAT_SET_FLAG */
-    uint16_t len;  /* Length is 8. */
-    uint32_t value; /* flag value */
-    uint32_t mask;    /*flag mask*/
+    uint16_t type;
+    uint16_t len; 
+    uint32_t value;
+    uint32_t mask;   
     uint8_t pad[4];   /* Align to 64-bits. */
 };
 OFP_ASSERT(sizeof(struct ofp_action_set_flag) == 16);
-\end{verbatim}
+\end{verbatim}\normalsize
+
+\noindent
+The \texttt{type} field should be set to \texttt{OFPAT\_SET\_FLAG}.
+\\\\
+The \texttt{len} field should be set to 16.
+\\\\
+The \texttt{value} field specifies the new value of global states.
+\\\\
+The \texttt{mask} field specifies which bits of the global state should be modified. A \texttt{flag\_mask} with value \texttt{0xFFFFFFFFFFFFFFFF} indicates that the global state field should be entirely overwritten.
+
+\todo{Luca e Davide}{Value and mask have to be renamed for consistency to flags and flags\_mask}
 
 \section{Flags match field}
 \label{section:oxm_of_flags}
 
-If a switch supports OpenState (flag OFPTC\_TABLE\_STATEFUL set), right after the packet headers are parsed, the global states are retrieved and written in the flags field. OXM\_OF\_FLAGS is a field with mask, so it is possible to match it either exactly or with wildcards. A 0 bit in the mask means i-th flags value is ``do not care'', while a 1 bit value means ``exact match''.
+If a switch supports OpenState (capability OFPC\_OPENSTATE), right after the packet headers are parsed, the global states are retrieved and written in the flags field. OXM\_OF\_FLAGS is a field with mask, so it is possible to match it either exactly or with wildcards. A 0 bit in the mask means i-th flags value is ``do not care'', while a 1 bit value means ``exact match''.
 
-Definition in ofsoftswitch13 (oxm-match.h file)
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 /* Global States */
 #define OXM_OF_FLAGS OXM_HEADER     (0x8000, 40, 4)
 #define OXM_OF_FLAGS_W OXM_HEADER_W (0x8000, 40, 4)
-\end{verbatim}
+\end{verbatim}\normalsize
 Example match:
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 flags=(4,5)
-\end{verbatim}
+\end{verbatim}\normalsize
 This command allows to match over *****************************1*0 flags configuration (4 in binary is 100 and the mask 5 is 101 that is exact match on LSB 1 (0 value) and LSB 3 (1 value) and ``don’t care'' over all the other flags. In order to perform an exact match on flags value no mask is required.
 \\Example match:
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 flags=4
-\end{verbatim}
+\end{verbatim}\normalsize
 NB: this match is very differend from the previous one. With this command we are matching over 00000000000000000000000000000100 flags configuration, so it is an exact match.
 
