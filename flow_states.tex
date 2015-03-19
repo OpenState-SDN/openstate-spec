@@ -36,6 +36,7 @@ Describe the key extractor in terms of:
 \comment{Carmelo}{It seems that the only case where I need to declare two distinct lookup-scope/update-scope is when I need to update the state for the reverse flow (e.g. MAC learning, reverse path forwarding consistency, etc.). Would it be better to define just one flow-scope (essentially the lookup scope) and give the possibility to call a set-state on a transformation of this flow scope? Example: I define the flow-scope as f=\{ipsrc,ipdst\} and I define a reverse() function, that returns the definition of the reverse flow for the passed scope. In this case it would be reverse(f) = \{ipdst,ipsrc\} }
 
 If the header fields specified by the lookup-scope are not found (e.g. extracting the IP source address when the Ethernet type is not IP) or are only partially found, a special state value \texttt{NULL} is returned and no information about state is appended to the packet.
+If the header fields specified by the update-scope are not found in the packet, the set-state action is not executed.
 
 \subsection{State Modification Messages}
 
@@ -65,6 +66,13 @@ This command gives the opportunity to set the vector of update-scope's header fi
 
 \comment{Luca, Davide}{There is a little difference between the delete command and a set state action with default state. The delete command removes the entry from the state table saving space, while by using a set state action with a DEFAULT state, the state entry is not removed. The two commands can be considered equivalent thanks to the fact that a default state will always be associated to an unknown flow.}
 
+\section{Set-state Action}
+\label{sec:act_set_state}
+In addition to state modification messages \ref{sec:msg_set_state}, state transitions can be triggered as a consequence of packet matching in a flow entry. By adding a set-state action to the action set, it is possibile to execute state transitions in the same stage or in any other (stateful) stage of the pipeline. Multiple state transitions are allowed by defining more than one set-state action in the action set.
+OpenFlow allows to execute actions in the group table, so it is possible to perform state transitions from the group table by inserting a set-state action in the action bucket.
+
+\subsection{Atomicity}
+As defined in OpenFlow, actions are usually executed at the end of the pipeline. The same applies for the \textbf{set-state} action, thus making the stateful steps ``lookup/update'' not atomic by default. Not enforcing atomicity can bring to consistency issues when more than one packet are processed by the pipeline at the same time. The only way to guarantees state consistency between packets is to call the \textbf{set-state} action from the \textbf{apply-action} instruction (instead of the \textbf{write-actions} instruction) in order to be sure to update the value contained in the state table when exiting a specific stage of the pipeline.
 
 
 

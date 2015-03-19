@@ -5,46 +5,33 @@
 
 \section{Capability}
 \label{sec:capability}
-A new OFPC\_OPENSTATE capability has been introduced.
+\scriptsize
+\begin{verbatim}
+OFPC_OPENSTATE = 1 << 9   /* Capabilities supported by the datapath (add to enum ofp_capabilities) */
+\end{verbatim}
+\normalsize
+\noindent
+A new \texttt{OFPC\_OPENSTATE} capability has been introduced.
 The basic flow table data structure has been extended with a support data structure implementing the state table (a hash map indexed by the flow key), the lookup and update key extractor (two ordered lists of flow match TLV field indexes) and the global states.
-By retrieving all the capabilities from the switch, the controller is able to properly configure the switch. If a switch is OpenState aware, OFPC\_OPENSTATE capability is defined enabling the controller to configure the statefulness of each stage by sending table feature message [\ref{sec:table_conf}].
+By retrieving all the capabilities from the switch, the controller is able to properly configure the switch. If a switch is OpenState aware, the \texttt{OFPC\_OPENSTATE} capability bit is set enabling the controller to configure the statefulness of each stage by sending table feature message [\ref{sec:table_conf}].
 
 \section{Stage Configuration}
 \label{sec:table_conf}
-If OFPTC\_TABLE\_STATEFUL flag is set, right after the packet headers are parsed, the flow state is retrieved and written in the state field, otherwise the packet directly jumps to the flow table. 
+\scriptsize
+\begin{verbatim}
+ OFPTC_TABLE_STATEFUL = 1 << 4   /* (add to bitmap of OFPTC_* flags) */
+\end{verbatim}
+\normalsize
+If \texttt{OFPTC\_TABLE\_STATEFUL} bit is set in the table features' config bitmap, right after the packet headers are parsed, the flow state is retrieved and written in the state field, otherwise the packet directly jumps to the flow table. 
 
 \section{State Modification Messages}
 
-\label{sec:msg_set_state}
+\label{sec:msg_set_state_proto}
 
-OpenState defines four different types of \texttt{OFPT\_STATE\_MOD} messages: 
-\begin{itemize}
-\setlength\itemsep{0em}
-\item \textbf{Set-lookup-extractor}: allows the controller to set the vector of header fields of the lookup-scope;
-\item \textbf{Set-update-extractor}: allows the controller to set the vector of header fields of the update-scope;
-\item \textbf{Set-flow-state command}: allows the controller to add/update a new row in the state table (equivalent to the set-state action);
-\item \textbf{Delete-flow-state}: allows the controller to delete a row in the state table (equivalent to invoking a  set-flow-state command or a set-state action with \texttt{DEFAULT} state).
-\end{itemize}
-
-The structures used
-
+Modifications to the state table from the controller are done with the \texttt{OFPT\_STATE\_MOD} message:
+\scriptsize
 \begin{verbatim}
-/*
- * Controller to switch message  (add to enum ofp_type)
- */
-OFPT_STATE_MOD = 30
-
-/*
- * Max number of fields that can be used to compose
- * the key extractor vector.
- */
-#define OFPSC_MAX_FIELD_COUNT 6
-
-/*
- * Number of bytes composing the state key
- */
-#define OFPSC_MAX_KEY_LEN 48
-
+OFPT_STATE_MOD = 30     /* Controller to switch message  (add to enum ofp_type) */
 
 struct ofp_state_mod {
     struct   ofp_header header;
@@ -55,6 +42,7 @@ struct ofp_state_mod {
     uint8_t  payload[];
 };
 \end{verbatim}
+\normalsize
 
 \comment{Luca, Davide}{
 From OpenFlow spec:
@@ -63,162 +51,132 @@ messages and flow statistics, and can also be used to filter flow statistics, fl
 
 Why has it been included in the ofp\_state\_mod message?
 }
-
+\noindent
+The \texttt{table\_id} field specifies the table to be modified (extractors setup or states modifications).
+\\\\
+The \texttt{command} field must be one of the following:
+\scriptsize
 \begin{verbatim}
-struct ofp_state_entry {
-    uint32_t key_len;
-    uint32_t state;
-    uint8_t  key[OFPSC_MAX_KEY_LEN];
-};
+enum ofp_state_mod_command {
+    OFPSC_SET_L_EXTRACTOR = 0,
+    OFPSC_SET_U_EXTRACTOR,
+    OFPSC_ADD_FLOW_STATE,   
+    OFPSC_DEL_FLOW_STATE
+ };
+\end{verbatim}
+\normalsize
+The differences between the four commands are explained in section \ref{sec:msg_set_state}.
+\\\\
+The \texttt{payload} field structure is defined by \texttt{ofp\_state\_entry} or \texttt{ofp\_extraction} according to the value of \texttt{command} field.
+\\\\
+An \texttt{OFPT\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_SET\_L\_EXTRACTOR} or \texttt{OFPSC\_SET\_U\_EXTRACTOR} must have a \texttt{payload} structure as defined by \texttt{ofp\_extraction}.
+\scriptsize
+\begin{verbatim}
+#define OFPSC_MAX_FIELD_COUNT 6     /* Max number of fields that can be used to compose the key extractor vector*/
 
 struct ofp_extraction {
     uint32_t field_count;
     uint32_t fields[OFPSC_MAX_FIELD_COUNT];
 };
-
-enum ofp_state_mod_command {
-	OFPSC_SET_L_EXTRACTOR = 0,
-	OFPSC_SET_U_EXTRACTOR,
-	OFPSC_ADD_FLOW_STATE,	
-	OFPSC_DEL_FLOW_STATE
- };
-
 \end{verbatim}
-
-\comment{Carmelo}{enum values are not defined for ofp\_state\_mod\_command}
-
-\comment{Luca, Davide}{\textbf{To Carmelo:} An enumerator with no = defines its value by adding 1 to the value of the previous enumeration constant }
+\normalsize
+The \texttt{field\_count} field specifies the number of fields provided in \texttt{fields[]}.
+\\\\The \texttt{fields[]} field contains the vector of fields composing the key extractor.
 
 \comment{Luca, Davide}{who decides OFPSC\_MAX\_FIELD\_COUNT and OFPSC\_MAX\_KEY\_LEN? Should they be configurable?}
+\noindent
+An \texttt{OFPT\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_ADD\_FLOW\_STATE} or \texttt{OFPSC\_DEL\_FLOW\_STATE} must have a \texttt{payload} structure as defined by \texttt{ofp\_state\_entry}.
+\scriptsize
+\begin{verbatim}
+#define OFPSC_MAX_KEY_LEN 48    /* Number of bytes composing the state key */
 
-\subsubsection{Set-lookup-extractor command}
-\label{subsec:set_l_extr}
+struct ofp_state_entry {
+    uint32_t key_len;
+    uint32_t state;
+    uint8_t  key[OFPSC_MAX_KEY_LEN];
+};
+\end{verbatim}
+\normalsize
+The \texttt{key\_len} field specifies the number of keys provided in \texttt{key[]} (it is the key size in byte).
+\\\\
+The \texttt{state} field contains the state to be inserted (or updated) in the state table. In case \texttt{command} field is set to \texttt{OFPSC\_DEL\_FLOW\_STATE}, the \texttt{state} field can take any value because only \texttt{key} field is used to delete the corresponding entry in the state table.
+\\\\
+The \texttt{key} field contains the key used to access the state table, splitted in bytes (e.g: ip 10.0.0.1 is stored as [10,0,0,1])
 
-The \texttt{OFPSC\_SET\_L\_EXTRACTOR} command gives the opportunity to set the lookup scope used in the state table.
-The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following parameters:
-
-\begin{itemize}
-\item table\_id = ID of the stage to be setup
-\item command = 0 (\texttt{OFPSC\_SET\_L\_EXTRACTOR})
-\item field\_count = number of specified field 
-\item fields = key’s fields
-\end{itemize}
-
-\todo{Luca, Davide}{Include C struct of OFPSC\_SET\_L\_EXTRACTOR}
-\comment{Luca, Davide}{A Set-lookup-extractor command is a ofp\_state\_mod message with command = 0 and struct ofp\_extraction as ofp\_state\_mod's payload}
-
-\subsubsection{Set-update-extractor command}
-\label{subsec:set_u_extr}
-
-The OFPSC\_SET\_U\_EXTRACTOR command gives the opportunity to set the update scope used in the state table.
-The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following parameters:
-
-\begin{itemize}
-\item table\_id = ID of the stage to be setup
-\item command = 1 (OFPSC\_SET\_U\_EXTRACTOR)
-\item field\_count = number of specified field 
-\item fields = key’s fields
-\end{itemize}
-
-\todo{Luca, Davide}{Include C struct of OFPSC\_SET\_U\_EXTRACTOR}
-\comment{Luca, Davide}{A Set-update-extractor command is a ofp\_state\_mod message with command = 1 and struct ofp\_extraction as ofp\_state\_mod's payload}
-
-\subsection{Set-flow-state command}
-\label{subsec:add_flow}
-
-The OFPSC\_ADD\_FLOW\_STATE command gives the opportunity to insert (or to overwrite) an entry in the state table.
-The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following parameters:
-
-\begin{itemize}
-\item table\_id = ID of the stage to be modified
-\item command = 2 (OFPSC\_ADD\_FLOW\_STATE)
-\item key\_count = it is the key size in byte
-\item state = it is the state to insert in the state table
-\item keys = key splitted in bytes (e.g: ip 10.0.0.1 is stored as [10,0,0,1])
-\end{itemize}
-
-\todo{Luca, Davide}{Include C struct of OFPSC\_ADD\_FLOW\_STATE}
-\comment{Luca, Davide}{A Set-flow-state command is an ofp\_state\_mod message with command = 2 and struct ofp\_state\_entry as ofp\_state\_mod's payload}
 
 \comment{Carmelo}{OFPSC\_ADD\_FLOW\_STATE should be renamed in OFPSC\_SET\_FLOW\_STATE}
-
-\subsection{Delete-flow-state command}
-\label{subsec:del_flow}
-
-With the OFPSC\_DEL\_FLOW\_STATE command is possible to delete a state table's entry.
-The controller sends a \texttt{OFPT\_STATE\_MOD} message with the following parameters:
-
-\begin{itemize}
-\item table\_id = ID of the stage to be modified
-\item command = 3 (OFPSC\_DEL\_FLOW\_STATE)
-\item key\_count = it is the key size in byte
-\item state = ANY
-\item keys = key splitted in bytes (e.g: ip 10.0.0.1 is stored as [10,0,0,1])
-\end{itemize}
-
-\todo{Luca, Davide}{Include C struct of OFPSC\_DEL\_FLOW\_STATE}
-\comment{Luca, Davide}{A Delete-flow-state command is an ofp\_state\_mod message with command = 3 and struct ofp\_state\_entry as ofp\_state\_mod's payload}
-
-The state value is not taken in consideration because the state table simply uses as key the lookup-scope's fields to delete the entry with key keys.
 
 \paragraph{Checks and Errors}
 
 \begin{itemize}
-\item In Set-lookup-extractor/Set-update-extractor commands \texttt{field\_count} must be consistent with the number of fields (always greater than 0) provided in \texttt{fields[]}, otherwise an error (\texttt{OFPET\_BAD\_ACTION}, \texttt{OFPBAC\_BAD\_LEN}) is returned at message unpack time
+\item When \texttt{command} field is set to \texttt{OFPSC\_SET\_L\_EXTRACTOR} or \texttt{OFPSC\_SET\_U\_EXTRACTOR}, \texttt{field\_count} must be consistent with the number of fields provided in \texttt{fields[]} and should be always greater than 0, otherwise the switch must return an \texttt{ofp\_error\_msg} with \texttt{OFPET\_BAD\_REQUEST} type and \texttt{OFPBRC\_BAD\_LEN} code at message unpack time.
 \comment{Carmelo}{Are both \texttt{OFPET\_BAD\_ACTION} and \texttt{OFPBAC\_BAD\_LEN} returned?}
-\comment{Luca, Davide}{\textbf{To Carmelo:} An error message has a type (\texttt{OFPET\_BAD\_ACTION}) and a code (\texttt{OFPBAC\_BAD\_LEN}): }
+\comment{Luca, Davide}{\textbf{To Carmelo:} An error message has a type (\texttt{OFPET\_BAD\_ACTION}) and a code (\texttt{OFPBAC\_BAD\_LEN}). }
 
-\item In Set-flow-state/Delete-flow-state commands \texttt{key\_count} must be consistent with the number of keys (always greater than 0) provided in \texttt{key[]}, otherwise an error (\texttt{OFPET\_BAD\_ACTION}, \texttt{OFPBAC\_BAD\_LEN}) is returned at msg unpack time. 
+\item When \texttt{command} field is set to \texttt{OFPSC\_ADD\_FLOW\_STATE} or \texttt{OFPSC\_DEL\_FLOW\_STATE}, \texttt{key\_count} field must be consistent with the number of keys provided in \texttt{key[]} and should be always greater than 0, otherwise 
+the switch must return an \texttt{ofp\_error\_msg} with \texttt{OFPET\_BAD\_REQUEST} type and \texttt{OFPBRC\_BAD\_LEN} code at message unpack time.
 
-\item In Set-flow-state/Delete-flow-state commands \texttt{key\_count} must be consistent with the number of fields of the update-scope (defined before with a OFPSC\_SET\_U\_EXTRACTOR). This check is performed at msg execution time
+\item When \texttt{command} field is set to \texttt{OFPSC\_ADD\_FLOW\_STATE} or \texttt{OFPSC\_DEL\_FLOW\_STATE}, \texttt{key\_count} field must be consistent with the number of fields of the update-scope (previously configured with an \texttt{OFPSC\_SET\_U\_EXTRACTOR} command). This check is performed at message execution time.
 \comment{Luca, Davide}{Should we inform the controller about this error?}
 
-\item Lookup-scope and update-scope should provide same length keys. This check should be performed by the switch when a set-extractor message is received: if we have already set the other extractor, the new extractor must have the same length. The check is performed at msg execution time.
+\item According to OpenState specifications, lookup-scope and update-scope should provide keys with same length. This check should be performed by the switch when a message with \texttt{command} field set to \texttt{OFPSC\_SET\_L\_EXTRACTOR} or \texttt{OFPSC\_SET\_U\_EXTRACTOR} is received: if the other extractor has already been configured, the new extractor key must have the same length. This check is performed at message execution time.
 \comment{Luca, Davide}{Should we inform the controller about this error?}
 
-\item Set-flow-state/Delete-flow-state commands must be executed onto a stage with stage\_id less or equal than the number of pipeline’s tables, otherwise the switch returns an error (OFPET\_BAD\_REQUEST, OFPBRC\_BAD\_TABLE\_ID). This check is performed at msg unpack time (since the number of table is fixed).
+\item When \texttt{command} field is set to \texttt{OFPSC\_ADD\_FLOW\_STATE} or \texttt{OFPSC\_DEL\_FLOW\_STATE}, \texttt{stage\_id} field must have a value less or equal than the number of pipeline’s tables, otherwise the switch must return an \texttt{ofp\_error\_msg} with \texttt{OFPET\_BAD\_REQUEST} type and \texttt{OFPBRC\_BAD\_TABLE\_ID} code. This check is performed at message unpack time (since the number of table is fixed).
 
 \end{itemize}
 
 \section{Set-state Action}
-\label{sec:act_set_state}
+\label{sec:act_set_state_proto}
 
-The \texttt{OFPAT\_SET\_STATE} action allows to set flow-states in a particulare stage of the pipeline.
+The \texttt{OFPAT\_SET\_STATE} action allows to set flow-states in a particulare stage of the pipeline.\\The following structure describes the body of set-state action:
 
-The structure of the \texttt{OFPAT\_SET\_STATE} is defined in the following:
-
+\scriptsize
 \begin{verbatim}
+OFPAT_SET_STATE = 28    /* New action type  (add to enum ofp_action_type) */
+
 /* Action structure for OFPAT_SET_STATE. */
 struct ofp_action_set_state {
-    uint16_t type;     /* OFPAT_SET_STATE */
-    uint16_t len;      /* Length is 16. */
-    uint32_t state;    /* State value. */
-    uint8_t stage_id;  /* Stage ID (same as flow table ID) of the state table */
+    uint16_t type;
+    uint16_t len;
+    uint32_t state;
+    uint8_t stage_id;
     uint8_t pad[7];    /* Align to 64-bits. */
 };
 OFP_ASSERT(sizeof(struct ofp_action_set_state) == 16);
 \end{verbatim}
+\normalsize
+\noindent
+The \texttt{type} field should be set to \texttt{OFPAT\_SET\_STATE}.
+\\\\
+The \texttt{len} field should be set to 16.
+\\\\
+The \texttt{state} field specifies the state to be inserted (or updated) in the state table.
+\\\\
+The \texttt{stage\_id} field specifies the target stage of the state update action.
 
 \comment{Carmelo}{I think we should rename stage\_id into table\_id for consistency with the OpenFlow specification}
-\comment{Luca, Davide}{\textbf{To Carmelo:} Since a stateful stage comprises a state table and and a flow table, we used stage\_id because we are not referring to the single flow table (table\_id) but we are referring to the entire stateful stage. }
-
-\subsection{Atomicity}
-As defined in OpenFlow, actions are usually executed at the end of the pipeline. The same applies for the \textbf{set-state} action, thus making the stateful steps ``lookup/update'' not atomic by default. Not enforcing atomicity can bring to consistency issues when more than one packet are processed by the pipeline at the same time. The only way to guarantees state consistency between packets is to call the \textbf{set-state} action from the \textbf{apply-action} instruction (instead of the \textbf{write-actions} instruction) in order to be sure to update the value contained in the state table when exiting a specific stage of the pipeline.
+\comment{Luca, Davide}{\textbf{To Carmelo:} Since a stateful stage comprises a state table and a flow table, we used stage\_id because we are not referring to the single flow table (table\_id) but we are referring to the entire stateful stage.}
 
 \subsection{Checks and Errors}
 
 \begin{itemize}
-\item Set-state action can be called only on stateful stage. This check is performed at action execution time (maybe the flow-mod message with a set-state action is received by the switch before configuring a stage as stateful. The important thing is that the stage is stateful at action execution time).
+\item Set-state action must be called only on stateful stage. This check is performed at action execution time because the flow-mod message with a set-state action could be received by the switch before configuring a stage as stateful. The important thing is that the stage is stateful at action execution time (since the number of table is fixed).
 \comment{Luca, Davide}{Should we inform the controller about this error?}
 
-\item Set-state action must be performed onto a stage with \texttt{stage\_id} less or equal than the number of pipeline’s tables. This check is performed at msg unpack time (the number of table is fixed, so installing a flow with a wrong action does not make sense).
+\item Set-state action must be performed onto a stage with \texttt{stage\_id} less or equal than the number of pipeline’s tables, otherwise the switch must return an \texttt{ofp\_error\_msg} with \texttt{OFPET\_BAD\_REQUEST} type and \texttt{OFPBRC\_BAD\_TABLE\_ID} code. This check is performed at message unpack time (the number of table is fixed, so installing a flow with a wrong action does not make sense).
 \end{itemize}
 
 \subsection{Priority}
 
-The new \texttt{OFPAT\_SET\_STATE} action has to be executed with an higher priority with respect to the \texttt{OFPAT\_SET\_FIELD} action. Given an action set containing both a set field and a set state action, with this setting it is avoided that the set field modifies header fields used by the set state's update scope before the set state execution.
+The actions in an action set are applied in the order specified in the OpenFlow specification, regardless of the order that
+they were added to the set. The new \texttt{OFPAT\_SET\_STATE} action has to be executed with an higher priority with respect to the \texttt{OFPAT\_SET\_FIELD} action. Given an action set containing both a set field and a set state action, with this setting it is avoided that the set field modifies header fields used by the set state's update scope before the set-state action execution.
 
 \comment{Carmelo}{What's the priority with regards to other actions such as output, drop, etc? I think we should explain this.}
+\comment{Luca,Davide}{Assumption: we want to perform set-state action before some other action of the same stage alters its header fields. For example the pop/push actions could modify it. So, in order to avoid it, we should define the highest possible priority for the set-state action.
+Is the assumption legitimate?
+\\ What if we set the highest possible priority and we want to perform a set-state action on a packet modified by other actions? We would need two stages: the first modifies header fields and the other executes the set-state action.
+}
 
 \section{State Match Field}
 \label{sec:match_state}
@@ -227,11 +185,12 @@ The \texttt{OXM\_OF\_STATE} field is the field used in the flow table to match o
 
 \comment{Luca, Davide}{Does OXM\_OF\_STATE need to have a mask?}
 \comment{Carmelo}{\textbf{To Luca, Davide:} I think yes, the state field should be maskable. An example use case could be matching on the second half of a MPLS label describing the ingress/egress switch. In the same way I propose to introduce the possibility to mask the state value in the set-state action.}
-
+\scriptsize
 \begin{verbatim}
 /* Flow state field definition (oxm-match.h) */
 #define OXM_OF_STATE OXM_HEADER     (0x8000, 41, 4)
 \end{verbatim}
+\normalsize
 
 \section{Flag modification messages}
 \label{section:flag_mod_msg}
