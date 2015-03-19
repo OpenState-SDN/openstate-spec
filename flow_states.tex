@@ -37,4 +37,34 @@ Describe the key extractor in terms of:
 
 If the header fields specified by the lookup-scope are not found (e.g. extracting the IP source address when the Ethernet type is not IP) or are only partially found, a special state value \texttt{NULL} is returned and no information about state is appended to the packet.
 
+\subsection{State Modification Messages}
+
+\label{sec:msg_set_state}
+
+State modification messages can have the following types:
+\scriptsize\begin{verbatim}
+enum ofp_state_mod_command {
+    OFPSC_SET_L_EXTRACTOR = 0,
+    OFPSC_SET_U_EXTRACTOR,
+    OFPSC_ADD_FLOW_STATE,   
+    OFPSC_DEL_FLOW_STATE
+ };
+\end{verbatim}\normalsize
+
+
+\comment{Carmelo}{enum values are not defined for ofp\_state\_mod\_command}
+\comment{Luca, Davide}{\textbf{To Carmelo:} An enumerator with no = defines its value by adding 1 to the value of the previous enumeration constant }
+
+\noindent
+To \textbf{setup the lookup extractor} the controller has to set the \texttt{OFPSC\_SET\_L\_EXTRACTOR} command in a state modification message. 
+This command allows the controller to set the vector of lookup-scope's header fields used in the state table.
+\\\\The controller can \textbf{setup the update extractor} by sending a state modification message with the \texttt{OFPSC\_SET\_U\_EXTRACTOR} command set.
+This command gives the opportunity to set the vector of update-scope's header fields used in the state table.
+\\\\To \textbf{add} or \textbf{update} a state entry in the state table, the controller has to send a state modification message with the \texttt{OFPSC\_ADD\_FLOW\_STATE} command set. This message is equivalent to the set state action \ref{sec:act_set_state}.
+\\\\The controller can \textbf{delete} a state entry by means of a state modification message with the \texttt{OFPSC\_DEL\_FLOW\_STATE} command set. This command is equivalent to invoking a \texttt{OFPSC\_ADD\_FLOW\_STATE} command or a set state action \ref{sec:act_set_state} with \texttt{DEFAULT} state.
+
+\comment{Luca, Davide}{There is a little difference between the delete command and a set state action with default state. The delete command removes the entry from the state table saving space, while by using a set state action with a DEFAULT state, the state entry is not removed. The two commands can be considered equivalent thanks to the fact that a default state will always be associated to an unknown flow.}
+
+
+
 
