@@ -2,8 +2,7 @@
 
 \chapter{Global States}
 \label{chap:global_states}
-Global states (or flags) are defined at datapath level and are not related to a single flow of a particular stage.
-
+By extending the flow state concept some states could be shared among multiple flows. For this reason global states have been developed. These states (a.k.a. flags) are defined at datapath level and are not related to a single flow of a particular stage. Now each incoming flow’s packet can be matched also according to the current value of global states.The global state update can be done by means of a new action setFlag triggered by a match in the flow table. Furthermore, the controller is able to modify and reset global states value of a specific switch exploiting the new flag modification message.
 \section{Flag modification messages}
 \label{sec:flag_mod_msg}
 
