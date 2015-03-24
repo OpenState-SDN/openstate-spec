@@ -250,9 +250,9 @@ The \texttt{type} field should be set to \texttt{OFPAT\_SET\_FLAG}.
 \\\\
 The \texttt{len} field should be set to 16.
 \\\\
-The \texttt{value} field specifies the new value of global states.
+The \texttt{flag} field specifies the new value of global states.
 \\\\
-The \texttt{flag} field specifies which bits of the global state should be modified. A \texttt{flag\_mask} with value \texttt{0xFFFFFFFFFFFFFFFF} indicates that the global state field should be entirely overwritten.
+The \texttt{flag\_mask} field specifies which bits of the global state should be modified. A \texttt{flag\_mask} with value \texttt{0xFFFFFFFFFFFFFFFF} indicates that the global state field should be entirely overwritten.
 
 \section{Flags match field}
 \label{section:oxm_of_flags}
