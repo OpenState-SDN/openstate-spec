@@ -35,8 +35,6 @@ OFPT_STATE_MOD = 30     /* Controller to switch message  (add to enum ofp_type) 
 
 struct ofp_state_mod {
     struct   ofp_header header;
-    uint64_t cookie;
-    uint64_t cookie_mask;
     uint8_t  table_id;
     uint8_t  command;
     uint8_t  payload[];
@@ -44,13 +42,6 @@ struct ofp_state_mod {
 \end{verbatim}
 \normalsize
 
-\comment{Luca, Davide}{
-From OpenFlow spec:
-\textit{The cookie field is an opaque data value chosen by the controller. This value appears in flow removed
-messages and flow statistics, and can also be used to filter flow statistics, flow modification and flow deletion. It is not used by the packet processing pipeline. When a flow entry is inserted in a table through an OFPFC\_ADD message, its cookie field is set to the provided value. When a flow entry is modified (OFPFC\_MODIFY or OFPFC\_MODIFY\_STRICT messages), its cookie field is unchanged.}
-
-Why has it been included in the ofp\_state\_mod message?
-}
 \noindent
 The \texttt{table\_id} field specifies the table to be modified (extractors setup or states modifications).
 \\\\
@@ -93,6 +84,7 @@ An \texttt{OFPT\_STATE\_MOD} message with \texttt{command} field set to \texttt{
 struct ofp_state_entry {
     uint32_t key_len;
     uint32_t state;
+    uint32_t state_mask;
     uint8_t  key[OFPSC_MAX_KEY_LEN];
 };
 \end{verbatim}
@@ -100,6 +92,8 @@ struct ofp_state_entry {
 The \texttt{key\_len} field specifies the number of keys provided in \texttt{key[]} (it is the key size in byte).
 \\\\
 The \texttt{state} field contains the state to be inserted (or updated) in the state table. In case \texttt{command} field is set to \texttt{OFPSC\_DEL\_FLOW\_STATE}, the \texttt{state} field can take any value because only \texttt{key} field is used to delete the corresponding entry in the state table.
+\\\\
+The \texttt{state\_mask} field specifies which bits of the global state should be modified. A \texttt{state\_mask} with value 0xFFFFFFFFFFFFFFFF indicates that the \texttt{state} field should be entirely overwritten.
 \\\\
 The \texttt{key} field contains the key used to access the state table, splitted in bytes (e.g: ip 10.0.0.1 is stored as [10,0,0,1])
 
@@ -137,8 +131,9 @@ struct ofp_action_set_state {
     uint16_t type;
     uint16_t len;
     uint32_t state;
+    uint32_t state_mask;
     uint8_t table_id;
-    uint8_t pad[7];    /* Align to 64-bits. */
+    uint8_t pad[3];    /* Align to 64-bits. */
 };
 OFP_ASSERT(sizeof(struct ofp_action_set_state) == 16);
 \end{verbatim}
@@ -149,6 +144,8 @@ The \texttt{type} field should be set to \texttt{OFPAT\_SET\_STATE}.
 The \texttt{len} field should be set to 16.
 \\\\
 The \texttt{state} field specifies the state to be inserted (or updated) in the state table.
+\\\\
+The \texttt{state\_mask} field specifies which bits of the \texttt{state} field must be modified. A \texttt{state\_mask} with value \texttt{0xFFFFFFFFFFFFFFFF} indicates that the \texttt{state} field must be entirely overwritten.
 \\\\
 The \texttt{table\_id} field specifies the target stage of the state update action.
 
@@ -176,13 +173,14 @@ Is the assumption legitimate?
 \label{sec:match_state}
 
 The \texttt{OXM\_OF\_STATE} field is the field used in the flow table to match on the state value defined in the virtual packet header field returned by a state table in a stateful stage. It is a 32 bit field.
+\\
+\texttt{OXM\_OF\_STATE} is a field with mask, so it is possible to match it either exactly or with wildcards. A 0 bit in the mask means i-th state's bit is ``do not care'', while a 1 bit value means ``exact match''.
 
-\comment{Luca, Davide}{Does OXM\_OF\_STATE need to have a mask?}
-\comment{Carmelo}{\textbf{To Luca, Davide:} I think yes, the state field should be maskable. An example use case could be matching on the second half of a MPLS label describing the ingress/egress switch. In the same way I propose to introduce the possibility to mask the state value in the set-state action.}
 \scriptsize
 \begin{verbatim}
 /* Flow state field definition (oxm-match.h) */
 #define OXM_OF_STATE OXM_HEADER     (0x8000, 41, 4)
+#define OXM_OF_STATE_W OXM_HEADER_W (0x8000, 41, 4)
 \end{verbatim}
 \normalsize
 
@@ -257,7 +255,7 @@ The \texttt{flag\_mask} field specifies which bits of the global state should be
 \section{Flags match field}
 \label{section:oxm_of_flags}
 
-If a switch supports OpenState (capability OFPC\_OPENSTATE), right after the packet headers are parsed, the global states are retrieved and written in the flags field. OXM\_OF\_FLAGS is a field with mask, so it is possible to match it either exactly or with wildcards. A 0 bit in the mask means i-th flags value is ``do not care'', while a 1 bit value means ``exact match''.
+If a switch supports OpenState (capability \texttt{OFPC\_OPENSTATE}), right after the packet headers are parsed, the global states are retrieved and written in the flags field. \\\texttt{OXM\_OF\_FLAGS} is a field with mask, so it is possible to match it either exactly or with wildcards. A 0 bit in the mask means i-th flags value is ``do not care'', while a 1 bit value means ``exact match''.
 
 \scriptsize\begin{verbatim}
 /* Global States */
