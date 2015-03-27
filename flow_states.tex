@@ -1,75 +1,72 @@
-%!TEX root=000-main.tex
+%!TEX root=main.tex
 
 \chapter{Flow States}
 \label{chap:flow_states}
 
-\todo{??}{Refactoring. This section should contain an high level description of the necessary elements and primitives to handle flow states, no C struct nor protocol message specification should be given here. These should be included in the protocol section along with checks and errors.}
+\section{Flow Identification}
 
-A flow-state is an information associated to a flow and shared among all the flow's packets. Flows are uniquelly defined by the lookup-scope and update-scope. TBC.
+Flow states are associated with packets and are valid only inside that stateful stage that produced them. Inside a stateful stage, flows can be arbitrary defined by using ``flow scopes'', which can be seen as the vector of header fields that distinguish one flow from another. For example a Layer 2 flow can be defined by using just the MAC source address and MAC destination address (2 fields), while a flow in the socket sense can be defined by using the whole L2-L4 header (6 fields).
 
-\section{State Table}
+In OpenState states for a given flow can be updated by events occurring on {\em different} flows. A prominent example is MAC learning: packets are forwarded using the {\em destination} MAC address, but the forwarding database is updated using the {\em source} MAC address. Similarly, the handling of bidirectional flows may encounter the same needs; for instance, the detection of a returning TCP SYNACK packet could trigger a state transition on the opposite direction. And in protocols such as FTP, a control exchange on port 21 could be used to set a state on the data transfer session on port 20. For this reason, two types of flow scopes are defined, the ``lookup-scope'' and the ``update-scope'', as the ordered sequence of header fields that shall be used to produce the key used to access the state table and perform, respectively, a lookup or an update operation.
 
-\todo{??}{
+\comment{Carmelo}{We should allow masked header fields in the flow scope. Example is if we wanna use only the IP subnet to retrieve the state or just part of the MPLS label (for example the first 10 bits that describes the ingress switch)}
 
-Describe the state table in terms of:
-    \begin{itemize}
-        \item columns (key, state label, timeouts, counters?)
-        \item exact match
-        \item table-miss (DEFAULT vs NULL)
-        \item timeouts
-    \end{itemize}
-}
-
-In case of table-miss (the key is not matched) then a \texttt{DEFAULT} state will be appended to the packet headers.
-
-\subsection{Key Extractor}
-
-\todo{??}{
-Describe the key extractor in terms of:
-    \begin{itemize}
-        \item difference between lookup/update (we should discuss, see next comment)
-        \item vector of header fields
-        \item header-miss (what if the specified header doesn't exist)
-    \end{itemize}
-}
+The lookup-scope and the update-scope are intrinsic to the state table and are used to configure the key extraction process.
 
 \comment{Carmelo}{It seems that the only case where I need to declare two distinct lookup-scope/update-scope is when I need to update the state for the reverse flow (e.g. MAC learning, reverse path forwarding consistency, etc.). Would it be better to define just one flow-scope (essentially the lookup scope) and give the possibility to call a set-state on a transformation of this flow scope? Example: I define the flow-scope as f=\{ipsrc,ipdst\} and I define a reverse() function, that returns the definition of the reverse flow for the passed scope. In this case it would be reverse(f) = \{ipdst,ipsrc\} }
 
-If the header fields specified by the lookup-scope are not found (e.g. extracting the IP source address when the Ethernet type is not IP) or are only partially found, a special state value \texttt{NULL} is returned and no information about state is appended to the packet.
+\section{State Table}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{| c | c | c | c |}
+        \hline
+        Key & State & Timeouts \\
+        \hline
+    \end{tabular}
+    \caption{Main components of a state entry in the state table}
+    \label{t:state-entry}
+\end{table}
+
+A state table consists of state entries. Each state table entry (see Fig.\ref{t:state-entry}) contains:
+
+\begin{itemize}
+    \item \textbf{Key:} String of bit used to match the packet flow key obtained from the key extractor;
+    \item \textbf{State:} value associated with a specific flow key
+    \item\textbf{Timeouts:} Maximum amount of time or idle time before the entry is expired by the switch;
+\end{itemize}
+
+The match on the state table is performed using the key extracted using the lookup-scope, and it is performed exactly, in other words wildcards are not allowed. In case of a table-miss (the key is not found) then a \emph{DEFAULT} state is appended to the packet headers. If the header fields specified by the lookup-scope are not found (e.g. extracting the IP source address when the Ethernet type is not IP), a special state value \emph{NULL} is returned.
+
+\comment{Carmelo}{What is the maximum length in bits of the state? Should it be defined by the switch? Should it be programmable?}
+
+\subsection{Timeouts}
+
+\todo{}{Describe timeouts and implementation}
+
 If the header fields specified by the update-scope are not found in the packet, the set-state action is not executed.
 
 \subsection{State Modification Messages}
 
 \label{sec:msg_set_state}
 
-State modification messages can have the following types:
-\scriptsize\begin{verbatim}
-enum ofp_state_mod_command {
-    OFPSC_SET_L_EXTRACTOR = 0,
-    OFPSC_SET_U_EXTRACTOR,
-    OFPSC_SET_FLOW_STATE,   
-    OFPSC_DEL_FLOW_STATE
- };
-\end{verbatim}\normalsize
+4 different state modification messages are defined by OpenState:
 
-
-\comment{Carmelo}{enum values are not defined for ofp\_state\_mod\_command}
-\comment{Luca, Davide}{\textbf{To Carmelo:} An enumerator with no = defines its value by adding 1 to the value of the previous enumeration constant }
-
-\noindent
-To \textbf{setup the lookup extractor} the controller has to set the \texttt{OFPSC\_SET\_L\_EXTRACTOR} command in a state modification message. 
-This command allows the controller to set the vector of lookup-scope's header fields used in the state table.
-\\\\The controller can \textbf{setup the update extractor} by sending a state modification message with the \texttt{OFPSC\_SET\_U\_EXTRACTOR} command set.
-This command gives the opportunity to set the vector of update-scope's header fields used in the state table.
-\\\\To \textbf{add} or \textbf{update} a state entry in the state table, the controller has to send a state modification message with the \texttt{OFPSC\_SET\_FLOW\_STATE} command set. This message is equivalent to the set state action \ref{sec:act_set_state}.
-\\\\The controller can \textbf{delete} a state entry by means of a state modification message with the \texttt{OFPSC\_DEL\_FLOW\_STATE} command set. This command is equivalent to invoking a \texttt{OFPSC\_SET\_FLOW\_STATE} command or a set state action \ref{sec:act_set_state} with \texttt{DEFAULT} state.
+\begin{itemize}
+    \item \textbf{Set-lookup-extractor:} allows the controller to set the header fields vector for the lookup-scope of the state table.
+    \item \textbf{Set-update-extractor:} allows the controller to set the header fields vector for the update-scope of the state table.
+    \item \textbf{Set-flow-state:} allows the controller to add or update a state entry in the state table.
+    \item \textbf{Delete-flow-state:} allows the controller to delete a state entry in the state table. This command is equivalent to invoking a set-flow-state command or a set state action \ref{sec:act_set_state} with \texttt{DEFAULT} state.
+\end{itemize}
 
 \comment{Luca, Davide}{There is a little difference between the delete command and a set state action with default state. The delete command removes the entry from the state table saving space, while by using a set state action with a DEFAULT state, the state entry is not removed. The two commands can be considered equivalent thanks to the fact that a default state will always be associated to an unknown flow.}
+\comment{Carmelo}{We might consider to delete an entry when we set its state do DEFAULT.}
 
 \section{Set-state Action}
 \label{sec:act_set_state}
-In addition to state modification messages \ref{sec:msg_set_state}, state transitions can be triggered as a consequence of packet matching in a flow entry. By adding a set-state action to the action set, it is possibile to execute state transitions in the same stage or in any other (stateful) stage of the pipeline. Multiple state transitions are allowed by defining more than one set-state action in the action set.
-OpenFlow allows to execute actions in the group table, so it is possible to perform state transitions from the group table by inserting a set-state action in the action bucket.
+In addition to state modification messages \ref{sec:msg_set_state}, state transitions can be triggered as a consequence of packet matching in a flow entry. By adding a set-state action to the action set, it is possible to execute state transitions in the same stage or in any other (stateful) stage of the pipeline. Multiple state transitions are allowed by defining more than one set-state action in the action set. OpenFlow allows to execute actions in the group table, so it is possible to perform state transitions from the group table by inserting a set-state action in the action bucket.
+
+When the switch executes a set-state action, the packet header is processed by the update-scope key extractor of the specific state table, the corresponding entry is then updated.
 
 \subsection{Atomicity}
-As defined in OpenFlow, actions are usually executed at the end of the pipeline. The same applies for the \textbf{set-state} action, thus making the stateful steps ``lookup/update'' not atomic by default. Not enforcing atomicity can bring to consistency issues when more than one packet are processed by the pipeline at the same time. The only way to guarantees state consistency between packets is to call the \textbf{set-state} action from the \textbf{apply-action} instruction (instead of the \textbf{write-actions} instruction) in order to be sure to update the value contained in the state table when exiting a specific stage of the pipeline.
+As defined in OpenFlow, actions are usually executed at the end of the pipeline. The same applies for the set-state action, thus making the stateful steps ``lookup/update'' not atomic by default. Not enforcing atomicity can bring to consistency issues when more than one packet are processed by the pipeline at the same time. The only way to guarantees state consistency between packets is to call the set-state action from the apply-action instruction (instead of the write-actions instruction) in order to be sure to update the value contained in the state table when exiting a specific stage of the pipeline.

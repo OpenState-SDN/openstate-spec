@@ -1,23 +1,23 @@
-%!TEX root=000-main.tex
+%!TEX root=main.tex
 
 \chapter{Global States}
 \label{chap:global_states}
-By extending the flow state concept some states could be shared among multiple flows. For this reason global states have been developed. These states (a.k.a. flags) are defined at datapath level and are not related to a single flow of a particular stage. Now each incoming flow’s packet can be matched also according to the current value of global states.The global state update can be done by means of a new action setFlag triggered by a match in the flow table. Furthermore, the controller is able to modify and reset global states value of a specific switch exploiting the new flag modification message.
-\section{Flag modification messages}
+By extending the flow state concept some states could be shared among multiple flows. For this reason global states have been developed. These states (a.k.a. flags) are defined at datapath level and are not related to a single flow of a particular stage. Now each incoming flow’s packet can be matched also according to the current value of global states. Global states can be updated c by means of a new action ``set-flags'' triggered by a match in the flow table. Furthermore, the controller is able to modify and reset global states value of a specific switch exploiting the new flag modification messages.
+
+\todo{Luca, Davide}{Decription of the global states as a string of bits, maskable. Who defines the maximum length of the string? the switch? The specification?}
+
+\section{Flag Modification Messages}
 \label{sec:flag_mod_msg}
 
-Flag modification messages can have the following types:
-\scriptsize\begin{verbatim}
-enum ofp_flag_mod_command { 
-    OFPSC_MODIFY_FLAGS = 0,
-    OFPSC_RESET_FLAGS
-};
-\end{verbatim}\normalsize
-\noindent
-To \textbf{modify} global states values the controller sends a flag modification message with the \texttt{OFPSC\_MODIFY\_FLAGS} command set. Global state values can be totally overwritten or, by using a mask, selectively modified.
-\\\\It is possible to \textbf{reset} the global states to the default value by sending a flag modification message with the \texttt{OFPSC\_RESET\_FLAGS} command set from the controller.
+The following types of flag modification messages are defined:
+
+\begin{itemize}
+	\item \textbf{Set-flags}: allows the controller to update the value of global states. Values can be totally overwritten or, by using a mask, selectively modified.
+	\item \textbf{Reset-flags}: allows the controller to reset global states to the default value.
+	\comment{Carmelo}{Who defines the default value? The switch? The controller?}
+\end{itemize}
 
 \section{Set-flag Action}
 \label{sec:act_set_flag}
-In addition to flag modification messages \ref{sec:flag_mod_msg}, the global states can be modified as a consequence of packet matching in a flow entry. By adding a set-flag action to the action set, it is possible to modify the global state values in any stage of the pipeline.
-OpenFlow allows to execute actions in the group table, so it is possible to update global state values from the group table by inserting a set-flag action in the action bucket.
+
+In addition to flag modification messages \ref{sec:flag_mod_msg}, the global states can be modified as a consequence of packet matching in a flow entry. By adding a set-flag action to the action set, it is possible to modify the global state values in any stage of the pipeline. OpenFlow allows to execute actions in the group table, so it is possible to update global state values from the group table by inserting a set-flag action in the action bucket. Using the set-flag action values can be totally overwritten or, by using a mask, selectively modified.
