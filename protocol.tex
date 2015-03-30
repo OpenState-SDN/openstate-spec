@@ -118,10 +118,9 @@ The \texttt{key} field contains the key used to access the state table, splitted
 
     \item When \texttt{command} field is set to \texttt{OFPSC\_SET\_FLOW\_STATE} or \texttt{OFPSC\_DEL\_FLOW\_STATE}, \texttt{key\_count} field must be consistent with the length of the key provided in \texttt{key[]} and should be always greater than 0, otherwise the switch must return an \texttt{ofp\_error\_msg} with \texttt{OFPET\_BAD\_REQUEST} type and \texttt{OFPBRC\_BAD\_LEN} code at message unpack time.
 
-    \item When \texttt{command} field is set to \texttt{OFPSC\_SET\_FLOW\_STATE} or \texttt{OFPSC\_DEL\_FLOW\_STATE}, \texttt{key\_count} field must be consistent with the number of fields of the update-scope (previously configured with an \texttt{OFPSC\_SET\_U\_EXTRACTOR} command). This check is performed at message execution time.
+    \item When \texttt{command} field is set to \texttt{OFPSC\_SET\_FLOW\_STATE} or \texttt{OFPSC\_DEL\_FLOW\_STATE}, \texttt{key\_count} field must be consistent with the number of bytes of the update-scope fields (previously configured with an \texttt{OFPSC\_SET\_U\_EXTRACTOR} command). This check is performed at message execution time.
     \comment{Luca, Davide}{Should we inform the controller about this error?}
     \comment{Carmelo}{Yes, the controller should be informed}
-    \comment{Carmelo}{Maybe there's an errore here. Should the \texttt{key\_count} field must be consistent with the number of ``fields'' or ``bytes'' of the update-scope?}
 
     \item Lookup-scope and update-scope should provide keys with same length. This check should be performed by the switch when a message with \texttt{command} field set to \texttt{OFPSC\_SET\_L\_EXTRACTOR} or \texttt{OFPSC\_SET\_U\_EXTRACTOR} is received: if the other extractor has already been configured, the new extractor key must have the same length. This check is performed at message execution time.
     \comment{Luca, Davide}{Should we inform the controller about this error?}
