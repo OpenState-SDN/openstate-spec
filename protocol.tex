@@ -6,22 +6,23 @@
 \section{Experimenter messages}
 OpenFlow experimenter messages have the following structure:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 struct ofp_experimenter_header {
     struct ofp_header header;   /* Type OFPT_EXPERIMENTER. */
     uint32_t experimenter;      /* Experimenter ID */
     uint32_t exp_type;          /* Experimenter defined. */
     /* Experimenter-defined arbitrary additional data. */
 };
-\end{verbatim}
+OFP_ASSERT(sizeof(struct ofp_experimenter_header) == 16);
+\end{verbatim}\normalsize
+
 OpenState experimenter messages have \texttt{type} field in \texttt{ofp\_header} set to \texttt{OFPT\_EXPERIMENTER}. \texttt{experimenter} field is set to \texttt{0xBEBABEBA} and \texttt{exp\_type} field is set to one of the following types:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 enum ofp_exp_messages {
     OFPT_EXP_STATE_MOD = 0,
-    OFPT_EXT_FLAG_MOD
 };
-\end{verbatim}
+\end{verbatim}\normalsize
 
 \subsection{State modification messages}
 
@@ -30,87 +31,127 @@ enum ofp_exp_messages {
 Configurations and modifications to the state table from the controller are performed with the State Modification message.
 This message is an OpenState experimenter messages with \texttt{exp\_type} field set to \texttt{OFPT\_EXP\_STATE\_MOD}.
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 /*
  * Structure of the state modification message.
  */
-struct ofp_exp_message_state_mod {
+struct ofp_exp_msg_state_mod {
     struct ofp_experimenter_header header;
-    uint8_t table_id;
     uint8_t command;
+    uint8_t pad;
     uint8_t payload[];
 };
-\end{verbatim}
-The \texttt{table\_id} field specifies the table to be modified. The \texttt{payload} field structure is defined by \texttt{ofp\_exp\_statefulness\_config}, \texttt{ofp\_exp\_extraction} or \texttt{ofp\_exp\_state\_mod\_entry} according to the value of \texttt{command} field. The differences between the five commands are explained in section \ref{sec:msg_set_state}.
+\end{verbatim}\normalsize
+The \texttt{payload} structure depends on the value of \texttt{command} field. The differences between the seven commands are explained in section \ref{sec:msg_set_state}.
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 
 /*
- * Possible command values for ofp_exp_message_state_mod.
+ * Possible values for 'command' field in ofp_exp_msg_state_mod
  */
-enum ofp_exp_message_state_mod_commands {
-    OFPSC_SET_L_EXTRACTOR = 0,
+enum ofp_exp_msg_state_mod_commands {
+    OFPSC_STATEFUL_TABLE_CONFIG = 0,
+    OFPSC_SET_L_EXTRACTOR,
     OFPSC_SET_U_EXTRACTOR,
     OFPSC_SET_FLOW_STATE,   
     OFPSC_DEL_FLOW_STATE,
-    OFPSC_STATEFULNESS_CONFIG
+    OFPSC_SET_GLOBAL_STATE,
+    OFPSC_RESET_GLOBAL_STATE   
 };
-\end{verbatim}
-To configure a stage as stateful the controller sends a \texttt{OFPT\_EXP\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_STATEFULNESS\_CONFIG} and a \texttt{payload} structure as defined by \texttt{ofp\_exp\_statefulness\_config}. During packet processing a stateful stage retrievs the flow state and adds it to the packet header. If state is NULL, state field is not appended.
+\end{verbatim}\normalsize
 
-\begin{verbatim}
-struct ofp_exp_statefulness_config {
-    uint8_t statefulness;
-    uint8_t pad;
+\paragraph{Stateful table configuration}\mbox{}\\
+To configure a stage as stateful the controller sends a \texttt{OFPT\_EXP\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_STATEFUL\_TABLE\_CONFIG} and a \texttt{payload} structure as defined by \texttt{ofp\_exp\_stateful\_table\_config}. During packet processing a stateful stage retrievs the flow state and adds it to the packet header. If state is \texttt{NULL}, no state field is appended.
+
+\scriptsize\begin{verbatim}
+struct ofp_exp_stateful_table_config { 
+    uint8_t table_id;
+    uint8_t stateful;
 };
-\end{verbatim}
-The \texttt{statefulness} field allows to configure the stage: 0 value makes the stage stateless, any value different from 0 makes it stateful.
+\end{verbatim}\normalsize
+The \texttt{table\_id} field specifies the table to be modified.
+\\
+The \texttt{stateful} field allows to configure the stage: \texttt{0} value makes the stage stateless, any value different from \texttt{0} makes it stateful.
 
-An \texttt{OFPT\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_SET\_L\_EXTRACTOR} or \texttt{OFPSC\_SET\_U\_EXTRACTOR} must have a \texttt{payload} structure as defined by \texttt{ofp\_exp\_extraction}.
+\paragraph{Lookup/Update scope configuration}\mbox{}\\
+An \texttt{OFPT\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_SET\_L\_EXTRACTOR} or
+\\
+\texttt{OFPSC\_SET\_U\_EXTRACTOR} must have a \texttt{payload} structure as defined by \texttt{ofp\_exp\_set\_extractor}.
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 /*
- * Max number of fields that can be used to compose the key extractor vector
+ * Max number of fields for the key extractor vector
  */
 #define OFPSC_MAX_FIELD_COUNT 6
 
-struct ofp_exp_extraction {
+struct ofp_exp_set_extractor {
+    uint8_t table_id;
+    uint8_t pad[3];
     uint32_t field_count;
     uint32_t fields[OFPSC_MAX_FIELD_COUNT];
 };
-\end{verbatim}
-The \texttt{field\_count} field specifies the number of fields provided in \texttt{fields[]}, which contains the TLV vector of fields composing the key extractor.
+\end{verbatim}\normalsize
+The \texttt{table\_id} field specifies the table to be modified.
+\\
+The \texttt{field\_count} field specifies the number of fields provided in \texttt{fields[]}, which contains the vector of TLV fields composing the key extractor.
 
 \comment{Luca, Davide}{who decides OFPSC\_MAX\_FIELD\_COUNT and OFPSC\_MAX\_KEY\_LEN? Should they be configurable?}
 
+\paragraph{Set flow state message}\mbox{}\\
+An \texttt{OFPT\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_SET\_FLOW\_STATE} has a \texttt{payload} structure as defined by \texttt{ofp\_exp\_set\_flow\_state}.
 
-An \texttt{OFPT\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_SET\_FLOW\_STATE} or \texttt{OFPSC\_DEL\_FLOW\_STATE} must have a \texttt{payload} structure as defined by \texttt{ofp\_state\_mod\_entry}.
-
-
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 /*
  * Number of bytes composing the state key.
  */
 #define OFPSC_MAX_KEY_LEN 48
 
-struct ofp_exp_state_entry {
+struct ofp_exp_set_flow_state {
+    uint8_t table_id;
+    uint8_t pad[3];
     uint32_t key_len;
     uint32_t state;
     uint32_t state_mask;
     uint8_t key[OFPSC_MAX_KEY_LEN];
 };
-OFP_ASSERT(sizeof(struct ofp_exp_state_entry) == 56);
-\end{verbatim}
+\end{verbatim}\normalsize
+The \texttt{table\_id} field specifies the table to be modified.
+\\
 The \texttt{key\_len} field specifies the key size (number of bytes) of the key provided in \texttt{key[]}.
-
-The \texttt{state} field contains the state to be inserted (or updated) in the state table. In case \texttt{command} field is set to \texttt{OFPSC\_DEL\_FLOW\_STATE}, the \texttt{state} field can take any value because only \texttt{key} field is used to delete the corresponding entry in the state table.
-
+\\
+The \texttt{state} field contains the state to be inserted (or updated) in the state table. 
+\\
 The \texttt{state\_mask} field specifies which bits of the state should be modified. A \texttt{state\_mask} with value \texttt{0xFFFFFFFFFFFFFFFF} indicates that the \texttt{state} field should be entirely overwritten.
-
+\\
 The \texttt{key} field contains the key used to access the state table, splitted in bytes (e.g: ip 10.0.0.1 is stored as [10,0,0,1]).
 
-\paragraph{Checks and Errors}
+\paragraph{Delete flow state message}\mbox{}\\
+An \texttt{OFPT\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_DEL\_FLOW\_STATE} has a \texttt{payload} structure as defined by \texttt{ofp\_exp\_del\_flow\_state}.
 
+\scriptsize\begin{verbatim}
+/*
+ * Number of bytes composing the state key.
+ */
+#define OFPSC_MAX_KEY_LEN 48
+
+struct ofp_exp_del_flow_state {
+    uint8_t table_id;
+    uint8_t pad[3];
+    uint32_t key_len;
+    uint8_t key[OFPSC_MAX_KEY_LEN];
+};
+\end{verbatim}\normalsize
+The \texttt{table\_id} field specifies the table to be modified.
+\\
+The \texttt{key\_len} field specifies the key size (number of bytes) of the key provided in \texttt{key[]}.
+\\
+The \texttt{state} field contains the state to be inserted (or updated) in the state table. 
+\\
+The \texttt{state\_mask} field specifies which bits of the state should be modified. A \texttt{state\_mask} with value \texttt{0xFFFFFFFFFFFFFFFF} indicates that the \texttt{state} field should be entirely overwritten.
+\\
+The \texttt{key} field contains the key used to access the state table, splitted in bytes (e.g: ip 10.0.0.1 is stored as [10,0,0,1]).
+
+\paragraph{Checks and Errors}\mbox{}\\
 \begin{itemize}
     \item When \texttt{command} field is set to \texttt{OFPSC\_SET\_L\_EXTRACTOR} or \texttt{OFPSC\_SET\_U\_EXTRACTOR}, \texttt{field\_count} must be consistent with the number of fields provided in \texttt{fields[]} and should be always greater than 0, otherwise the switch must return an \texttt{ofp\_error\_msg} with \texttt{OFPET\_BAD\_REQUEST} type and \texttt{OFPBRC\_BAD\_LEN} code at message unpack time.
 
@@ -127,37 +168,26 @@ The \texttt{key} field contains the key used to access the state table, splitted
     \item When \texttt{command} field is set to \texttt{OFPSC\_SET\_FLOW\_STATE} or \texttt{OFPSC\_DEL\_FLOW\_STATE}, \texttt{table\_id} field must have a value less or equal than the number of pipeline’s tables, otherwise the switch must return an \texttt{ofp\_error\_msg} with \texttt{OFPET\_BAD\_REQUEST} type and \texttt{OFPBRC\_BAD\_TABLE\_ID} code. This check is performed at message unpack time (since the number of table is fixed).
 \end{itemize}
 
-\subsection{Flag modification messages}
-\label{sec:flag_mod_msg_proto}
-Configurations and modifications to the global states from the controller are performed with the Flag modification message.
-This message is an OpenState experimenter messages with \texttt{exp\_type} field set to \texttt{OFPT\_EXP\_FLAG\_MOD}.
+\paragraph{Global state modification message}\mbox{}\\
+An \texttt{OFPT\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_SET\_GLOBAL\_STATE} has a \texttt{payload} structure as defined by \texttt{ofp\_exp\_set\_global\_state}.
 
-\begin{verbatim}
-struct ofp_exp_message_flag_mod {
-    struct ofp_experimenter_header header; 
+\scriptsize\begin{verbatim}
+struct ofp_exp_set_global_state {
     uint32_t flag;
     uint32_t flag_mask;
-    uint8_t command;
-    uint8_t pad[7];                  /* Pad to 64 bits. */
 };
-\end{verbatim}
-The \texttt{flag} field specifies the new value of global states. The \texttt{flag\_mask} field specifies which bits of the global state should be modified. A \texttt{flag\_mask} with value \texttt{0xFFFFFFFF} indicates that the global state field should be entirely overwritten.
+\end{verbatim}\normalsize
+The \texttt{flag} field specifies the new value of global states.
+\\
+The \texttt{flag\_mask} field specifies which bits of the global state should be modified. A \texttt{flag\_mask} with value \texttt{0xFFFFFFFF} indicates that the global state field should be entirely overwritten.
 
-The \texttt{command} field must be one of the following:
+\paragraph{Global state reset message}\mbox{}\\
+An \texttt{OFPT\_STATE\_MOD} message with \texttt{command} field set to \texttt{OFPSC\_RESET\_GLOBAL\_STATE} has an empty \texttt{payload}.
+This message reset the global state value to \texttt{OFP\_GLOBAL\_STATES\_DEFAULT}.
 
-\begin{verbatim}
-enum ofp_exp_message_flag_mod_command { 
-    OFPSC_MODIFY_FLAGS = 0,
-    OFPSC_RESET_FLAGS
-};
-\end{verbatim}
-
-The difference between the two commands is explained in section \ref{sec:flag_mod_msg}.
-
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 #define OFP_GLOBAL_STATES_DEFAULT 0
-\end{verbatim}
-In case command field is set to \texttt{OFPSC\_RESET\_FLAGS}, both the \texttt{flag} field and the \texttt{flag\_mask} can take any value and global states are reset to the default value defined in \texttt{OFP\_GLOBAL\_STATES\_DEFAULT}.
+\end{verbatim}\normalsize
 
 \comment{Luca e Davide}{Does the OFP\_GLOBAL\_STATES\_DEFAULT be configurable by a controller message?}
 
@@ -165,7 +195,7 @@ In case command field is set to \texttt{OFPSC\_RESET\_FLAGS}, both the \texttt{f
 
 OpenFlow experimenter actions have the following structure:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 struct ofp_action_experimenter_header {
     uint16_t type;          /* OFPAT_EXPERIMENTER. */
     uint16_t len;           /* Length is a multiple of 8. */
@@ -173,32 +203,34 @@ struct ofp_action_experimenter_header {
     /* Experimenter-defined arbitrary additional data. */
 };
 OFP_ASSERT(sizeof(struct ofp_action_experimenter_header) == 8);
-\end{verbatim}
+\end{verbatim}\normalsize
 OpenState experimenter actions have the following structure:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 struct ofp_openstate_action_experimenter_header {
     struct ofp_action_experimenter_header header;
     uint32_t act_type;
     uint8_t pad[4];
 };
 OFP_ASSERT(sizeof(struct ofp_openstate_action_experimenter_header) == 16);
-\end{verbatim}
-\texttt{type} field and \texttt{experimenter} field in \texttt{ofp\_action\_experimenter\_header} are set to \texttt{OFPAT\_EXPERIMENTER} and \texttt{0xBEBABEBA} respectively. \texttt{act\_type} field is set to one of the following values:
+\end{verbatim}\normalsize
+\texttt{type} field and \texttt{experimenter} field in \texttt{ofp\_action\_experimenter\_header} are set to \texttt{OFPAT\_EXPERIMENTER} and \texttt{0xBEBABEBA} respectively.
+\\
+\texttt{act\_type} field is set to one of the following values:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 enum ofp_exp_actions {
     OFPAT_EXP_SET_STATE = 0,
     OFPAT_EXP_SET_FLAG
 };
-\end{verbatim}
+\end{verbatim}\normalsize
 
 \subsection{Set-state Action}
 \label{sec:act_set_state_proto}
 
 This action is an OpenState experimenter action with \texttt{act\_type} field set to \texttt{OFPAT\_EXP\_SET\_STATE}. This action allows to set flow states in a particulare stage of the pipeline. The following structure describes the body of the set-state action:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 /*
  * Action structure for OFPAT_EXP_SET_STATE.
  */
@@ -210,12 +242,14 @@ struct ofp_exp_action_set_state {
     uint8_t pad[7];         /* Align to 64-bits. */
 };
 OFP_ASSERT(sizeof(struct ofp_exp_action_set_state) == 32);
-\end{verbatim}
+\end{verbatim}\normalsize
 The \texttt{state} field is used to set the value to be inserted (or updated) in the state table.
-The \texttt{state\_mask} field specifies which bits of the \texttt{state} field should be modified. A \texttt{state\_mask} with value \texttt{0xFFFFFFFF} indicates that the \texttt{state} field must be entirely overwritten. The \texttt{table\_id} field specifies the target stage of the state update action.
+\\
+The \texttt{state\_mask} field specifies which bits of the \texttt{state} field should be modified. A \texttt{state\_mask} with value \texttt{0xFFFFFFFF} indicates that the \texttt{state} field must be entirely overwritten.
+\\
+The \texttt{table\_id} field specifies the target stage of the state update action.
 
-\subsection{Checks and Errors}
-
+\paragraph{Checks and Errors}\mbox{}\\
 \begin{itemize}
     \item Set-state action should be called only on stateful stage. This check is performed at action execution time because the flow-mod message with a set-state action could be received by the switch before configuring a stage as stateful. The important thing is that the stage is stateful at action execution time (since the number of table is fixed).
 \comment{Luca, Davide}{Should we inform the controller about this error?}
@@ -224,8 +258,7 @@ The \texttt{state\_mask} field specifies which bits of the \texttt{state} field 
     \item Set-state action should be performed onto a stage with \texttt{stage\_id} less or equal than the number of pipeline’s tables, otherwise the switch must return an \texttt{ofp\_error\_msg} with \texttt{OFPET\_BAD\_REQUEST} type and \texttt{OFPBRC\_BAD\_TABLE\_ID} code. This check is performed at message unpack time (the number of table is fixed, so installing a flow with a wrong action does not make sense).
 \end{itemize}
 
-\subsection{Priority}
-
+\paragraph{Priority}\mbox{}\\
 Actions in an action set are applied in the order specified in the OpenFlow specification, regardless of the order that they were added to the set.
 If we want to perform set-state action before some other action of the same stage alters its header fields (potentially the fields of the update-key), we should define the highest possible priority for the set-state action.
 The problem is that an experimenter action OFPAT\_EXPERIMENTER has an unique priority (specified in ofsoftswitch13): we cannot differentiate the priority of two experimenter actions and we cannot change the priority of an experimenter action itself.
@@ -237,7 +270,7 @@ If the above assumption is legitimate, the programmer must use the apply-action 
 
 This action is an OpenState experimenter action with \texttt{act\_type} field set to \texttt{OFPAT\_EXP\_SET\_FLAG}. This action allows to set global states. The following structure describes the body of the set-flag action:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 
 /*
  * Action structure for OFPAT_EXP_SET_FLAG
@@ -248,67 +281,73 @@ struct ofp_exp_action_set_flag {
     uint32_t flag_mask;     /* Flag mask */
 };
 OFP_ASSERT(sizeof(struct ofp_exp_action_set_flag) == 24);
-\end{verbatim}
-The \texttt{flag} field specifies the new value of global states. The \texttt{flag\_mask} field specifies which bits of the global state should be modified. A \texttt{flag\_mask} with value \texttt{0xFFFFFFFF} indicates that the global state field should be entirely overwritten.
+\end{verbatim}\normalsize
+The \texttt{flag} field specifies the new value of global states.
+\\
+The \texttt{flag\_mask} field specifies which bits of the global state should be modified. A \texttt{flag\_mask} with value \texttt{0xFFFFFFFF} indicates that the global state field should be entirely overwritten.
 
 \section{Match fields}
 
-The OpenState Experimenter flow match fields are standard OXM TLV with \texttt{oxm\_class} set to \texttt{OFPXMC\_EXPERIMENTER}. The \texttt{oxm\_field} can have the following values:
+The OpenState Experimenter flow match fields are standard OpenFlow Extensible Match OXM TLV. The standard flow match field structure consist of an header (\texttt{oxm\_class}, \texttt{oxm\_field}, \texttt{oxm\_hasmask} and \texttt{oxm\_length}) and a body.
+\\
+The \texttt{oxm\_class} must be set to \texttt{OFPXMC\_EXPERIMENTER}.
+\\
+The \texttt{oxm\_field} can have the following values:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 enum oxm_exp_match_fields {
     OFPXMT_EXP_FLAGS,      /* Global States */
     OFPXMT_EXP_STATE       /* Flow State */
 };
-\end{verbatim}
-The first four bytes of the OXM TLV’s body contains the OpenState's experimenter identifier \texttt{0xBEBABEBA}. The standard \texttt{oxm\_value} and \texttt{oxm\_mask} start from the fifth byte.
+\end{verbatim}\normalsize
+The first four bytes of the OXM TLV’s body contains the OpenState's experimenter identifier \texttt{0xBEBABEBA}. The usual \texttt{oxm\_value} and \texttt{oxm\_mask} start from the fifth byte.
 
 \subsection{State Match Field}
 \label{sec:match_state}
 
 The experimenter \texttt{OFPXMT\_EXP\_STATE} field is used in the flow table in order to match on the state value defined in the virtual packet header field, which is returned by a state table in a stateful stage. It is a 32 bit field.
-
+\\
 \texttt{OFPXMT\_EXP\_STATE} is maskable, so it is possible to match it either exactly or with wildcards. A 0 bit in the mask means i-th state's bit is ``do not care'', while a 1 bit value means ``exact match''.
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 /*
  * Flow state field definition
  */
 #define OXM_EXP_STATE OXM_HEADER     (0xFFFF, 1, 8)
 #define OXM_EXP_STATE_W OXM_HEADER_W (0xFFFF, 1, 6)
-\end{verbatim}
+\end{verbatim}\normalsize
 
 \subsection{Flags match field}
 \label{section:oxm_of_flags}
 
 Right after the packet headers are parsed, the global states are retrieved and written in the flags field. \texttt{OXM\_EXP\_FLAGS} is a field with mask, so it is possible to match it either exactly or with wildcards. A 0 bit in the mask means i-th flags value is ``do not care'', while a 1 bit value means ``exact match''.
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 /* Global States */
 #define OXM_EXP_FLAGS OXM_HEADER     (0xFFFF, 0, 8)
 #define OXM_EXP_FLAGS_W OXM_HEADER_W (0xFFFF, 0, 6) 
-\end{verbatim}
+\end{verbatim}\normalsize
 Example match:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 flags=(4,5)
-\end{verbatim}
+\end{verbatim}\normalsize
 This command allows to match over \texttt{*****************************1*0} flags configuration (4 in binary is 100 and the mask 5 is 101 that is exact match on LSB 1 (0 value) and LSB 3 (1 value) and ``don’t care'' over all the other flags. In order to perform an exact match on flags value no mask is required.
-
+\\
 Example match:
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 flags=4
-\end{verbatim}
+\end{verbatim}\normalsize
 NB: this match is very different from the previous one. With this command we are matching over \texttt{00000000000000000000000000000100} flags configuration, so it is an exact match.
 
 
-\section{State Statistics Message}
+\section{Experimenter Statistics Message}
 
 \label{sec:msg_state_stats_proto}
 
 While the system is running, the controller may request information from the datapath using the \texttt{OFPT\_MULTIPART\_REQUEST} message:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 struct ofp_multipart_request {
     struct ofp_header header;
     uint16_t type; /* One of the OFPMP_* constants. */
@@ -321,10 +360,10 @@ OFP_ASSERT(sizeof(struct ofp_multipart_request) == 16);
 enum ofp_multipart_request_flags {
     OFPMPF_REQ_MORE = 1 << 0 /* More requests to follow. */
 };
-\end{verbatim}
+\end{verbatim}\normalsize
 The switch responds with one or more \texttt{OFPT\_MULTIPART\_REPLY} messages:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 struct ofp_multipart_reply {
     struct ofp_header header;
     uint16_t type; /* One of the OFPMP_* constants. */
@@ -337,10 +376,12 @@ OFP_ASSERT(sizeof(struct ofp_multipart_reply) == 16);
 enum ofp_multipart_reply_flags {
     OFPMPF_REPLY_MORE = 1 << 0 /* More replies to follow. */
 };
-\end{verbatim}
-The \texttt{flags} field is set to 0x0001 if more requests/replies will follow the first one. An experimenter multipart messages have the \texttt{type} field in both \texttt{ofp\_multipart\_request} and \texttt{ofp\_multipart\_reply} set to \texttt{OFPMP\_EXPERIMENTER} and the first bytes of the request and reply bodies are the following structure:
+\end{verbatim}\normalsize
+The \texttt{flags} field is set to 0x0001 if more requests/replies will follow the first one.
 
-\begin{verbatim}
+An OpenFlow experimenter multipart messages have the \texttt{type} field set to \texttt{OFPMP\_EXPERIMENTER} (in both \texttt{ofp\_multipart\_request} and \texttt{ofp\_multipart\_reply}) and the first bytes of the request and reply bodies have the following structure:
+
+\scriptsize\begin{verbatim}
 /* Body for ofp_multipart_request/reply of type OFPMP_EXPERIMENTER. */
 
 struct ofp_experimenter_stats_header {
@@ -349,21 +390,21 @@ struct ofp_experimenter_stats_header {
     /* Experimenter-defined arbitrary additional data. */
 };
 OFP_ASSERT(sizeof(struct ofp_experimenter_stats_header) == 8);
-\end{verbatim}
+\end{verbatim}\normalsize
 All the OpenState experimenter multipart messages have the \texttt{experimenter} field set to \texttt{0xBEBABEBA} and \texttt{exp\_type} field is set to one of the following types:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 enum ofp_stats_extension_commands {
     OFPMP_EXP_STATE_STATS,      
     OFPMP_EXP_FLAGS_STATS
 };
-\end{verbatim}
+\end{verbatim}\normalsize
 \subsection{State statistics message}
 
 The State statistics message is an OpenState's multipart experimenter message having as \texttt{exp\_type} field the value \texttt{OFPMP\_EXP\_STATE\_STATS}.
 This message is used by the controller to get statistics from either all the state tables or a single one. Furthermore, it is possible to retrieve information about a set of state entries that satisfy a specific key.
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 /* Body for ofp_multipart_request of type OFPMP_EXP_STATE_STATS. */
 struct ofp_exp_state_stats_request {
     struct ofp_experimenter_stats_header header;
@@ -380,13 +421,13 @@ struct ofp_exp_state_stats_reply{
     struct ofp_experimenter_stats_header header;
     struct ofp_exp_state_stats *stats;
 };
-\end{verbatim}
+\end{verbatim}\normalsize
 In both the messages, you have to specify the experimenter ID and the multipart experimenter type as specified in the structure \texttt{ofp\_experimenter\_stats\_header}.
 In the request message, the \texttt{table\_id} field specifies the table to be queried and the \texttt{match} fields are used to selectively extract specific state entries.
 
 The reply to a \texttt{OFPMP\_EXP\_STATE\_STATS} multipart request consists of an array of the following:
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 /*Structure of a single state statistic*/
 struct ofp_exp_state_stats {
     uint16_t length;        /* Length of this entry. */
@@ -407,7 +448,7 @@ struct ofp_exp_state_entry{
     uint32_t            state;
 };
 OFP_ASSERT(sizeof(struct ofp_exp_state_entry) == 56);
-\end{verbatim}
+\end{verbatim}\normalsize
 If more than one entry match the request, multiple \texttt{ofp\_exp\_state\_stats} will be appended to the message.
 The length of a single \texttt{ofp\_exp\_state\_stats} is stored in the \texttt{length} field, the \texttt{table\_id} field specifies the source table, the \texttt{field\_count} specifies the number of extractor field stored in the \texttt{fields} field and the \texttt{entry} field specifies the state entry: \texttt{key}, \texttt{key\_len} and \texttt{state}.
 
@@ -418,7 +459,7 @@ The length of a single \texttt{ofp\_exp\_state\_stats} is stored in the \texttt{
 The Global states statistics message is an OpenState's multipart experimenter message having as \texttt{exp\_type} field the value \texttt{OFPMP\_EXP\_FLAGS\_STATS}.
 It is used by the controller to retrieve the global states value of a specific datapath.
 
-\begin{verbatim}
+\scriptsize\begin{verbatim}
 /* Body for ofp_multipart_request of type OFPMP_EXP_FLAGS_STATS. */
 struct ofp_exp_global_state_stats_request {
     struct ofp_experimenter_stats_header header;
@@ -432,6 +473,6 @@ struct ofp_exp_global_state_stats {
     uint32_t global_states;
 };
 OFP_ASSERT(sizeof(struct ofp_exp_global_state_stats) == 16);
-\end{verbatim}
+\end{verbatim}\normalsize
 In both the messages, you have to specify the experimenter ID and the multipart experimenter type as specified in the structure \texttt{ofp\_experimenter\_stats\_header}.
 The request message has an empty body, instead the reply message has as \texttt{global\_states} value a 32 bit long field that specifies the current global states value.
