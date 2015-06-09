@@ -17,42 +17,32 @@
 \rohead{\headmark}
 \pagestyle{scrheadings}
 
-% permette l'inserimento "rapido" del virgolettato (ad es. per citazioni)
 \newcommand{\fastquote}[1]{``#1''}
 \newcommand{\comment}[2]{\begin{mdframed}[backgroundcolor=yellow]\footnotesize \textbf{#1} (comment) \\ #2 \end{mdframed}}
 \newcommand{\todo}[2]{\begin{mdframed}[backgroundcolor=red]\footnotesize \textbf{TODO $\rightarrow$ #1:} #2 \end{mdframed}}
 
-%\setlength{\parindent}{0cm}
 \setlength{\parskip}{0.3cm}
 
-% \setcounter{secnumdepth}{3}
-% \setcounter{tocdepth}{3}
-
 \title{OpenState Specification}
-\subtitle{Version 0.x}
+\subtitle{Version 1.0 (beta)}
 \author{}
-\date{xxx}
+\date{June 2015}
 
 
 \begin{document}
 
 \maketitle
 
-% Inizio Numerazione Romana
 \pagenumbering{Roman}
 
-% Indice
 \tableofcontents
 
 \newpage
 \clearpage
 
 
-% Inizio Numerazione Araba
 \pagenumbering{arabic}
 
-% Vari Capitoli
-% \include{introduction} %
 \include{introduction}
 \include{glossary}
 \include{pipeline}
@@ -63,7 +53,6 @@
 \section*{Credits}
 Spec contributions, in alphabetical order: Giuseppe Bianchi, Marco Bonola, Antonio Capone, Carmelo Cascone, Luca Pollini, Davide Sanvito
 
-% Fine del documento
 
 \end{document}
 
