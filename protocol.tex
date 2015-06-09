@@ -112,6 +112,10 @@ struct ofp_exp_set_flow_state {
     uint32_t key_len;
     uint32_t state;
     uint32_t state_mask;
+    uint32_t hard_rollback;
+    uint32_t idle_rollback;
+    uint32_t hard_timeout;
+    uint32_t idle_timeout;    
     uint8_t key[OFPSC_MAX_KEY_LEN];
 };
 \end{verbatim}\normalsize
@@ -122,6 +126,8 @@ The \texttt{key\_len} field specifies the key size (number of bytes) of the key 
 The \texttt{state} field contains the state to be inserted (or updated) in the state table. 
 \\
 The \texttt{state\_mask} field specifies which bits of the state should be modified. A \texttt{state\_mask} with value \texttt{0xFFFFFFFFFFFFFFFF} indicates that the \texttt{state} field should be entirely overwritten.
+\\
+\texttt{hard\_timeout} and \texttt{idle\_timeout} fields specifiy the number of microseconds before state is rollbacked to \texttt{hard\_rollback} and \texttt{idle\_rollback}, respectively.
 \\
 The \texttt{key} field contains the key used to access the state table, splitted in bytes (e.g: ip 10.0.0.1 is stored as [10,0,0,1]).
 
@@ -236,18 +242,25 @@ This action is an OpenState experimenter action with \texttt{act\_type} field se
  */
 struct ofp_exp_action_set_state {
     struct ofp_openstate_action_experimenter_header header;
-    uint32_t state;         /* State value. */
-    uint32_t state_mask;    /* State mask */
-    uint8_t table_id;       /* Stage destination */
-    uint8_t pad[7];         /* Align to 64-bits. */
+    uint32_t state; /* State instance. */
+    uint32_t state_mask; /* State mask */
+    uint8_t table_id; /*Stage destination*/
+    uint8_t pad[3];
+    uint32_t hard_rollback;
+    uint32_t idle_rollback;
+    uint32_t hard_timeout;
+    uint32_t idle_timeout;
+    uint8_t pad2[4];   /* Align to 64-bits. */
 };
-OFP_ASSERT(sizeof(struct ofp_exp_action_set_state) == 32);
+OFP_ASSERT(sizeof(struct ofp_exp_action_set_state) == 48);
 \end{verbatim}\normalsize
 The \texttt{state} field is used to set the value to be inserted (or updated) in the state table.
 \\
 The \texttt{state\_mask} field specifies which bits of the \texttt{state} field should be modified. A \texttt{state\_mask} with value \texttt{0xFFFFFFFF} indicates that the \texttt{state} field must be entirely overwritten.
 \\
 The \texttt{table\_id} field specifies the target stage of the state update action.
+\\
+\texttt{hard\_timeout} and \texttt{idle\_timeout} fields specifiy the number of microseconds before state is rollbacked to \texttt{hard\_rollback} and \texttt{idle\_rollback}, respectively.
 
 \paragraph{Checks and Errors}\mbox{}\\
 \begin{itemize}
