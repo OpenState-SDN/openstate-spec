@@ -423,9 +423,10 @@ struct ofp_exp_state_stats_request {
     struct ofp_experimenter_stats_header header;
     uint8_t table_id;       /* ID of table to read (from ofp_table_stats),
                                OFPTT_ALL for all tables. */
-    uint8_t pad[7];         /* Align to 64 bits. */
-    
-    struct ofp_match match; /* Fields to match. Variable size. */
+    uint8_t                 get_from_state;
+    uint8_t                 pad[2];         /* Align to 64 bits. */
+    uint32_t                state;   
+    struct ofp_match        match; /* Fields to match. Variable size. */
 };
 OFP_ASSERT(sizeof(struct ofp_exp_state_stats_request) == 24);
 
@@ -436,7 +437,8 @@ struct ofp_exp_state_stats_reply{
 };
 \end{verbatim}\normalsize
 In both the messages, you have to specify the experimenter ID and the multipart experimenter type as specified in the structure \texttt{ofp\_experimenter\_stats\_header}.
-In the request message, the \texttt{table\_id} field specifies the table to be queried and the \texttt{match} fields are used to selectively extract specific state entries.
+\\\\In the request message, the \texttt{table\_id} field specifies the table to be queried and the \texttt{match} fields are used to selectively extract specific state entries.
+\\\\If \texttt{get\_from\_state} field is different from 1, this message queries the state table for obtaining entries in a specific \texttt{state}. If \texttt{get\_from\_state} is 0, \texttt{state} field is ignored.
 
 The reply to a \texttt{OFPMP\_EXP\_STATE\_STATS} multipart request consists of an array of the following:
 
